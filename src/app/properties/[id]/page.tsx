@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { properties, inquiries } from "@/db/schema";
+import { properties } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import InquiryForm from "@/components/InquiryForm";
@@ -36,7 +36,7 @@ export default async function PropertyPage({
   if (!property) notFound();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
       <div className="bg-gray-100 dark:bg-gray-800 rounded-xl h-72 flex items-center justify-center text-gray-400">
         No image
       </div>
