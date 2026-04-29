@@ -21,13 +21,23 @@ const icons = {
   tools:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3-3a6 6 0 01-7.9 7.9l-6.1 6.1a2 2 0 01-3-3l6.1-6.1a6 6 0 017.9-7.9l-3 3z"/></svg>,
   list:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 12v6M9 15h6"/></svg>,
   calendar: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>,
+  agents:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.87"/></svg>,
+  star:     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>,
+  newUser:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><circle cx="10" cy="7" r="4"/><path d="M2 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/><path d="M19 8v6M22 11h-6"/></svg>,
+  badge:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.4l-4.8 2.5.9-5.4L4.2 7.7l5.4-.8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  search:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>,
+  mapPin:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+  globe:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>,
+  filter:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4"><path d="M22 3H2l8 9.46V19l4 2v-8.54z"/></svg>,
 };
 
 /* ── Data ────────────────────────────────────────────────────── */
 type DropdownItem = { label: string; href: string; icon: React.ReactNode; description?: string };
+type DropdownSection = { heading: string; items: DropdownItem[] };
 type NavLinkDef =
   | { label: string; dropdown: false; href: string }
-  | { label: string; dropdown: true; featured?: DropdownItem; items: DropdownItem[] };
+  | { label: string; dropdown: true; featured?: DropdownItem; items: DropdownItem[]; sections?: never }
+  | { label: string; dropdown: true; featured?: DropdownItem; sections: DropdownSection[]; items?: never };
 
 const NAV_LINKS: NavLinkDef[] = [
   {
@@ -51,9 +61,41 @@ const NAV_LINKS: NavLinkDef[] = [
       { label: "Schedule a Consultation",  href: "/sell/consultation", icon: icons.calendar, description: "Talk to an expert, no strings" },
     ],
   },
-  { label: "Real Estate Agents", dropdown: false, href: "/agents" },
+  {
+    label: "Real Estate Agents",
+    dropdown: true,
+    featured: { label: "Find an Agent", href: "/agents/search", icon: icons.search, description: "Search by name, specialty or city" },
+    items: [
+      { label: "All Agents",      href: "/agents",               icon: icons.agents,  description: "Browse every agent" },
+      { label: "Top-Rated",       href: "/agents?sort=rating",   icon: icons.star,    description: "Highest reviewed" },
+      { label: "New Agents",      href: "/agents?sort=newest",   icon: icons.newUser, description: "Recently joined" },
+      { label: "Featured Agents", href: "/agents?featured=true", icon: icons.badge,   description: "Editor's picks" },
+    ],
+  },
   { label: "Feed",               dropdown: false, href: "/feed" },
 ];
+
+/* ── Shared dropdown item ────────────────────────────────────── */
+function DropdownLink({ item, onClose }: { item: DropdownItem; onClose: () => void }) {
+  return (
+    <NavLink
+      href={item.href}
+      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.07] transition-colors group"
+      activeClassName="bg-white/[0.07]"
+      onClick={onClose}
+    >
+      <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.06] text-white/50 group-hover:text-white/90 group-hover:bg-white/[0.12] transition-colors shrink-0">
+        {item.icon}
+      </span>
+      <div className="min-w-0">
+        <div className="text-sm text-white/80 group-hover:text-white transition-colors font-medium leading-tight truncate">{item.label}</div>
+        {item.description && (
+          <div className="text-[11px] text-white/35 group-hover:text-white/55 transition-colors mt-0.5 truncate">{item.description}</div>
+        )}
+      </div>
+    </NavLink>
+  );
+}
 
 /* ── Component ───────────────────────────────────────────────── */
 export default function Navbar() {
@@ -118,7 +160,7 @@ export default function Navbar() {
                     "bg-[#111]/90 backdrop-blur-xl border border-white/[0.08]",
                     "shadow-[0_24px_60px_rgba(0,0,0,0.55)]",
                     "transition-all duration-200 origin-top",
-                    link.label === "Buy" ? "w-[480px]" : "w-[300px]",
+                    link.label === "Buy" ? "w-[480px]" : link.label === "Real Estate Agents" ? "w-[520px]" : "w-[300px]",
                     openDropdown === link.label
                       ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
                       : "opacity-0 scale-95 -translate-y-2 pointer-events-none",
@@ -147,28 +189,30 @@ export default function Navbar() {
                         </NavLink>
                       )}
 
-                      {/* Item grid */}
-                      <div className={link.label === "Buy" ? "grid grid-cols-2 gap-1" : "flex flex-col gap-1"}>
-                        {link.items.map((item) => (
-                          <NavLink
-                            key={item.label}
-                            href={item.href}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.07] transition-colors group"
-                            activeClassName="bg-white/[0.07]"
-                            onClick={() => setOpenDropdown(null)}
-                          >
-                            <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.06] text-white/50 group-hover:text-white/90 group-hover:bg-white/[0.12] transition-colors shrink-0">
-                              {item.icon}
-                            </span>
-                            <div className="min-w-0">
-                              <div className="text-sm text-white/80 group-hover:text-white transition-colors font-medium leading-tight truncate">{item.label}</div>
-                              {item.description && (
-                                <div className="text-[11px] text-white/35 group-hover:text-white/55 transition-colors mt-0.5 truncate">{item.description}</div>
-                              )}
+                      {/* Sectioned layout (Real Estate Agents) */}
+                      {"sections" in link && link.sections ? (
+                        <div className="grid grid-cols-2 gap-x-2">
+                          {link.sections.map((section) => (
+                            <div key={section.heading}>
+                              <p className="px-3 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-widest text-white/30">
+                                {section.heading}
+                              </p>
+                              <div className="flex flex-col gap-1">
+                                {section.items.map((item) => (
+                                  <DropdownLink key={item.label} item={item} onClose={() => setOpenDropdown(null)} />
+                                ))}
+                              </div>
                             </div>
-                          </NavLink>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      ) : (
+                        /* Flat list (Buy / Sell) */
+                        <div className={link.label === "Buy" ? "grid grid-cols-2 gap-1" : "flex flex-col gap-1"}>
+                          {(link.items ?? []).map((item) => (
+                            <DropdownLink key={item.label} item={item} onClose={() => setOpenDropdown(null)} />
+                          ))}
+                        </div>
+                      )}
 
                       {/* Footer strip — Sell only */}
                       {link.label === "Sell" && (
@@ -244,7 +288,10 @@ export default function Navbar() {
                             {link.featured.label}
                           </NavLink>
                         )}
-                        {link.items.map((item) => (
+                        {("sections" in link && link.sections
+                          ? link.sections.flatMap((s) => s.items)
+                          : link.items ?? []
+                        ).map((item) => (
                           <NavLink
                             key={item.label}
                             href={item.href}
