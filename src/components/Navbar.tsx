@@ -62,12 +62,17 @@ export default function Navbar() {
 
           {/* Desktop Auth Button */}
           <div className="hidden md:block">
-            <a
-              href="#"
-              className="border border-white/70 text-white text-sm px-6 py-2 rounded-lg hover:bg-white hover:text-[#1a1a1a] transition-colors font-medium"
+            <Link
+              href="/auth"
+              className={[
+                "text-sm px-6 py-2 rounded-lg font-medium transition-colors",
+                pathname === "/auth"
+                  ? "bg-white text-[#1a1a1a]"
+                  : "border border-white/70 text-white hover:bg-white hover:text-[#1a1a1a]",
+              ].join(" ")}
             >
               Join / Sign in
-            </a>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -128,13 +133,18 @@ export default function Navbar() {
                   )}
                 </a>
               ))}
-              <a
-                href="#"
-                className="block border border-white/70 text-white text-sm px-3 py-3 rounded-lg hover:bg-white hover:text-[#1a1a1a] transition-colors font-medium text-center mt-4"
+              <Link
+                href="/auth"
+                className={[
+                  "block text-sm px-3 py-3 rounded-lg font-medium text-center mt-4 transition-colors",
+                  pathname === "/auth"
+                    ? "bg-white text-[#1a1a1a]"
+                    : "border border-white/70 text-white hover:bg-white hover:text-[#1a1a1a]",
+                ].join(" ")}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Join / Sign in
-              </a>
+              </Link>
             </nav>
           </div>
         )}
