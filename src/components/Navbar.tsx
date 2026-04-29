@@ -2,13 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useState } from "react";
 
 const NAV_LINKS = [
   { label: "Buy", dropdown: true },
-  { label: "Rent", dropdown: true },
   { label: "Sell", dropdown: true },
-  { label: "Premier", dropdown: false },
-  { label: "Mortgage", dropdown: true },
   { label: "Real Estate Agents", dropdown: true },
   { label: "Feed", dropdown: false },
 ];
@@ -16,54 +14,131 @@ const NAV_LINKS = [
 export default function Navbar() {
   const pathname = usePathname();
   const isHome = pathname === "/";
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <header
       className={[
-        "w-full h-14 flex items-center px-4 md:px-8 z-50 transition-colors",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         isHome
-          ? "absolute top-0 left-0 right-0 bg-transparent"
-          : "relative bg-[#1a1a1a]",
+          ? "bg-gradient-to-b from-black/50 to-transparent backdrop-blur-sm"
+          : "bg-[#1a1a1a]/95 backdrop-blur-md shadow-lg border-b border-white/10",
       ].join(" ")}
     >
-      <Link
-        href="/"
-        className="text-white font-bold text-base tracking-[0.15em] uppercase mr-4 hover:opacity-80 transition-opacity shrink-0"
-      >
-        RealEstate
-      </Link>
-
-      <nav className="flex items-center gap-1 flex-1 min-w-0">
-        {NAV_LINKS.map((link) => (
-          <a
-            key={link.label}
-            href="#"
-            className="flex items-center gap-0.5 text-white text-sm px-2 py-1.5 rounded hover:bg-white/15 transition-colors whitespace-nowrap"
+      <div className="max-w-7xl mx-auto px-4 md:px-8">
+        <div className="flex items-center justify-between h-16">
+          <Link
+            href="/"
+            className="text-white font-bold text-lg tracking-[0.2em] uppercase hover:opacity-80 transition-opacity shrink-0"
           >
-            {link.label}
-            {link.dropdown && (
-              <svg
-                className="w-3 h-3 ml-0.5 opacity-70 shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
-          </a>
-        ))}
-      </nav>
+            RealEstate
+          </Link>
 
-      <a
-        href="#"
-        className="border border-white/70 text-white text-sm px-4 py-1.5 rounded hover:bg-white hover:text-[#1a1a1a] transition-colors font-medium whitespace-nowrap shrink-0"
-      >
-        Join / Sign in
-      </a>
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
+            {NAV_LINKS.map((link) => (
+              <a
+                key={link.label}
+                href="#"
+                className="flex items-center gap-1 text-white text-base px-3 py-2 rounded-lg hover:bg-white/10 transition-colors whitespace-nowrap"
+              >
+                {link.label}
+                {link.dropdown && (
+                  <svg
+                    className="w-3 h-3 opacity-70 shrink-0"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </a>
+            ))}
+          </nav>
+
+          {/* Desktop Auth Button */}
+          <div className="hidden md:block">
+            <a
+              href="#"
+              className="border border-white/70 text-white text-sm px-6 py-2 rounded-lg hover:bg-white hover:text-[#1a1a1a] transition-colors font-medium"
+            >
+              Join / Sign in
+            </a>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden text-white p-2 rounded-lg hover:bg-white/10 transition-colors"
+            aria-label="Toggle menu"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              {isMobileMenuOpen ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              )}
+            </svg>
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-white/10 bg-black/20 backdrop-blur-md">
+            <nav className="px-4 py-4 space-y-2">
+              {NAV_LINKS.map((link) => (
+                <a
+                  key={link.label}
+                  href="#"
+                  className="flex items-center gap-2 text-white text-sm px-3 py-3 rounded-lg hover:bg-white/10 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {link.label}
+                  {link.dropdown && (
+                    <svg
+                      className="w-3 h-3 opacity-70 shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  )}
+                </a>
+              ))}
+              <a
+                href="#"
+                className="block border border-white/70 text-white text-sm px-3 py-3 rounded-lg hover:bg-white hover:text-[#1a1a1a] transition-colors font-medium text-center mt-4"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Join / Sign in
+              </a>
+            </nav>
+          </div>
+        )}
+      </div>
     </header>
   );
 }

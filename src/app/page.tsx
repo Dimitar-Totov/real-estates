@@ -68,34 +68,16 @@ export default function HomePage() {
     <>
       {/* ─────────────────────────── HERO ─────────────────────────── */}
       {/*
-        The Navbar is absolutely positioned over this section (see Navbar.tsx).
-        -mt-14 pulls the section up to sit behind the navbar.
+        The Navbar is now fixed at the top with modern styling.
+        pt-16 pushes the content down to clear the navbar.
       */}
-      <section className="relative -mt-14 h-[520px] sm:h-[620px] lg:h-[720px] xl:h-[760px] flex items-center overflow-hidden max-w-full mx-auto">
+      <section className="relative h-[520px] sm:h-[620px] lg:h-[720px] xl:h-[760px] flex items-center overflow-hidden max-w-full mx-auto">
 
         {/* ── Photo background ── */}
         <div
           className="absolute inset-0 bg-cover bg-center max-w-[1920px] mx-auto "
           style={{ backgroundImage: "url('/hero.webp')" }}
         />
-
-        {/*
-          Overlay 1 — top band: darkens the strip where the navbar sits.
-          Ensures logo and nav links remain legible over the bright sky.
-        */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 18%, transparent 38%)",
-          }}
-        />
-
-        {/*
-          Overlay 2 — left band: darkens the hero text zone.
-          The image's right side (house / ocean) stays vivid.
-        */}
-
 
         {/* ── Hero content — padded top to clear the 56px navbar ── */}
         <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 pt-14">
