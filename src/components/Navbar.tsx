@@ -20,7 +20,7 @@ export default function Navbar() {
   return (
     <header
       className={[
-        "h-14 flex items-center px-6 z-50 transition-colors",
+        "w-full h-14 flex items-center px-4 md:px-8 z-50 transition-colors",
         isHome
           ? "absolute top-0 left-0 right-0 bg-transparent"
           : "relative bg-[#1a1a1a]",
@@ -28,17 +28,17 @@ export default function Navbar() {
     >
       <Link
         href="/"
-        className="text-white font-bold text-lg tracking-[0.2em] uppercase mr-10 hover:opacity-80 transition-opacity shrink-0"
+        className="text-white font-bold text-base tracking-[0.15em] uppercase mr-4 hover:opacity-80 transition-opacity shrink-0"
       >
         RealEstate
       </Link>
 
-      <nav className="flex items-center gap-1 flex-1 overflow-x-auto">
+      <nav className="flex items-center gap-1 flex-1 min-w-0">
         {NAV_LINKS.map((link) => (
           <a
             key={link.label}
             href="#"
-            className="flex items-center gap-0.5 text-white text-sm px-3 py-1.5 rounded hover:bg-white/15 transition-colors whitespace-nowrap"
+            className="flex items-center gap-0.5 text-white text-sm px-2 py-1.5 rounded hover:bg-white/15 transition-colors whitespace-nowrap"
           >
             {link.label}
             {link.dropdown && (
@@ -60,7 +60,7 @@ export default function Navbar() {
 
       <a
         href="#"
-        className="border border-white/70 text-white text-sm px-5 py-1.5 rounded hover:bg-white hover:text-[#1a1a1a] transition-colors font-medium whitespace-nowrap shrink-0"
+        className="border border-white/70 text-white text-sm px-4 py-1.5 rounded hover:bg-white hover:text-[#1a1a1a] transition-colors font-medium whitespace-nowrap shrink-0"
       >
         Join / Sign in
       </a>

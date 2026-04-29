@@ -3,6 +3,7 @@ import { properties } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import PropertyCard from "@/components/PropertyCard";
 import SearchFilters from "@/components/SearchFilters";
+import Link from "next/link";
 import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
@@ -49,12 +50,12 @@ export default async function ListingsPage({
       {filtered.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <p className="text-lg">No properties found.</p>
-          <a
+          <Link
             href="/properties/new"
             className="mt-4 inline-block text-blue-600 hover:underline"
           >
             Add the first property →
-          </a>
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

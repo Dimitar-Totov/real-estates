@@ -71,11 +71,11 @@ export default function HomePage() {
         The Navbar is absolutely positioned over this section (see Navbar.tsx).
         -mt-14 pulls the section up to sit behind the navbar.
       */}
-      <section className="relative -mt-14 h-[600px] flex items-center overflow-hidden">
+      <section className="relative -mt-14 h-[520px] sm:h-[620px] lg:h-[720px] xl:h-[760px] flex items-center overflow-hidden max-w-full mx-auto">
 
         {/* ── Photo background ── */}
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-center max-w-[1920px] mx-auto "
           style={{ backgroundImage: "url('/hero.webp')" }}
         />
 
@@ -95,17 +95,11 @@ export default function HomePage() {
           Overlay 2 — left band: darkens the hero text zone.
           The image's right side (house / ocean) stays vivid.
         */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to right, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.45) 30%, rgba(0,0,0,0.15) 58%, transparent 80%)",
-          }}
-        />
+
 
         {/* ── Hero content — padded top to clear the 56px navbar ── */}
-        <div className="relative z-10 w-full px-16 pt-14">
-          <h1 className="text-5xl font-bold text-white leading-tight mb-8 tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] max-w-xl">
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 pt-14">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight mb-8 tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] max-w-3xl">
               Find the right home
               <br />
               at the right price
@@ -115,9 +109,9 @@ export default function HomePage() {
       </section>
 
       {/* ─────────────── TOURING SECTION ─────────────── */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 min-h-[420px] mt-16">
-        <div className="flex flex-col justify-center px-16 xl:px-28 py-16">
-          <h2 className="text-[1.9rem] font-bold text-gray-900 leading-snug mb-4">
+      <section className="grid grid-cols-1 lg:grid-cols-2 min-h-[520px] mt-16 px-4 sm:px-6 lg:px-10 max-w-[1920px] mx-auto">
+        <div className="flex flex-col justify-center px-4 sm:px-6 lg:px-10 py-16 max-w-xl">
+          <h2 className="text-3xl sm:text-[2.2rem] font-bold text-gray-900 leading-snug mb-4">
             Start touring homes, no
             <br />
             strings attached
@@ -146,8 +140,8 @@ export default function HomePage() {
       </section>
 
       {/* ─────────────── WHY US ─────────────── */}
-      <section className="bg-gray-50 py-20 px-8">
-        <div className="max-w-5xl mx-auto">
+      <section className="bg-gray-50 py-20 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl font-bold text-gray-900 mb-12 text-center">
             Why buyers and sellers choose us
           </h2>
@@ -166,7 +160,7 @@ export default function HomePage() {
       </section>
 
       {/* ─────────────── FOOTER ─────────────── */}
-      <footer className="border-t border-gray-200 text-center text-sm text-gray-400 py-8">
+      <footer className="border-t border-gray-200 text-center text-sm text-gray-400 py-8 px-4 sm:px-6">
         &copy; {new Date().getFullYear()} RealEstate &mdash; All rights
         reserved
       </footer>
