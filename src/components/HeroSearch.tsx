@@ -3,24 +3,31 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const HERO_TABS = ["Buy", "Rent", "Sell", "Mortgage", "Home Estimate"];
+const HERO_TABS = ["Buy", "Rent"];
+const TAB_STATUS = ["for_sale", "for_rent"];
 
 export default function HeroSearch() {
-  const [activeTab, setActiveTab] = useState(0);
   const router = useRouter();
   const sp = useSearchParams();
   const [query, setQuery] = useState(sp.get("q") ?? "");
+  const [activeTab, setActiveTab] = useState(() => {
+    const s = sp.get("status");
+    return s === "for_rent" ? 1 : 0;
+  });
 
   useEffect(() => {
     setQuery(sp.get("q") ?? "");
+    const s = sp.get("status");
+    setActiveTab(s === "for_rent" ? 1 : 0);
   }, [sp]);
 
   function handleSearch() {
     const q = query.trim();
+    const status = TAB_STATUS[activeTab];
     if (q) {
-      router.push(`/?q=${encodeURIComponent(q)}`, { scroll: false });
+      router.push(`/?q=${encodeURIComponent(q)}&status=${status}`, { scroll: false });
     } else {
-      router.push("/", { scroll: false });
+      router.push(`/?status=${status}`, { scroll: false });
     }
   }
 
@@ -31,7 +38,16 @@ export default function HeroSearch() {
         {HERO_TABS.map((tab, i) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(i)}
+            onClick={() => {
+              setActiveTab(i);
+              const q = query.trim();
+              const status = TAB_STATUS[i];
+              if (q) {
+                router.push(`/?q=${encodeURIComponent(q)}&status=${status}`, { scroll: false });
+              } else if (sp.get("status")) {
+                router.push(`/?status=${status}`, { scroll: false });
+              }
+            }}
             className={`text-xs sm:text-sm pb-2 transition-colors ${
               i === activeTab
                 ? "text-white border-b-2 border-white font-semibold"

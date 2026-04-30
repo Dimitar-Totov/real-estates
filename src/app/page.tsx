@@ -36,25 +36,28 @@ const FEATURES = [
   },
 ];
 
-function searchProperties(q: string) {
+function searchProperties(q: string, status?: string) {
   const term = q.toLowerCase().trim();
-  return MOCK_PROPERTIES.filter((p) =>
-    p.city.toLowerCase().includes(term) ||
-    p.address.toLowerCase().includes(term) ||
-    p.state.toLowerCase().includes(term) ||
-    p.zipCode.includes(term) ||
-    p.title.toLowerCase().includes(term)
-  );
+  return MOCK_PROPERTIES.filter((p) => {
+    if (status && p.status !== status) return false;
+    return (
+      p.city.toLowerCase().includes(term) ||
+      p.address.toLowerCase().includes(term) ||
+      p.state.toLowerCase().includes(term) ||
+      p.zipCode.includes(term) ||
+      p.title.toLowerCase().includes(term)
+    );
+  });
 }
 
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; status?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, status } = await searchParams;
   const query   = q?.trim() ?? "";
-  const results = query ? searchProperties(query) : [];
+  const results = query ? searchProperties(query, status) : [];
   const hasSearch = query.length > 0;
 
   return (
@@ -98,7 +101,7 @@ export default async function HomePage({
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <NavLink
-                href={`/listings?city=${encodeURIComponent(query)}`}
+                href={`/listings?city=${encodeURIComponent(query)}${status ? `&status=${status}` : ""}`}
                 className="text-sm font-semibold text-[#CC0000] hover:text-[#aa0000] transition-colors whitespace-nowrap"
               >
                 View all in Listings →
