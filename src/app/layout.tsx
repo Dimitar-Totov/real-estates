@@ -15,6 +15,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-white text-gray-900">
         <Navbar />
         <main className="flex-1 pt-16">{children}</main>
+        <footer className="border-t border-gray-200 text-center text-sm text-gray-400 py-8 px-4 sm:px-6">
+          &copy; {new Date().getFullYear()} RealEstate &mdash; All rights reserved
+        </footer>
       </body>
     </html>
   );
