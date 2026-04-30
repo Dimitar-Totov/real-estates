@@ -22,9 +22,9 @@ export default function NavLink({
   const isActive = exact ? pathname === hrefStr : pathname.startsWith(hrefStr);
 
   const resolved =
-    typeof className === "function"
-      ? className({ isActive } as never)
-      : [className, isActive ? activeClassName : ""].filter(Boolean).join(" ");
+    typeof className === "string" || className === undefined
+      ? [className, isActive ? activeClassName : ""].filter(Boolean).join(" ")
+      : String(className);
 
   return (
     <Link href={href} className={resolved} {...rest}>
