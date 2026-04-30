@@ -1,18 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const HERO_TABS = ["Buy", "Rent", "Sell", "Mortgage", "Home Estimate"];
 
 export default function HeroSearch() {
-  const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState(0);
   const router = useRouter();
+  const sp = useSearchParams();
+  const [query, setQuery] = useState(sp.get("q") ?? "");
+
+  useEffect(() => {
+    setQuery(sp.get("q") ?? "");
+  }, [sp]);
 
   function handleSearch() {
-    if (query.trim()) {
-      router.push(`/listings?city=${encodeURIComponent(query.trim())}`);
+    const q = query.trim();
+    if (q) {
+      router.push(`/?q=${encodeURIComponent(q)}`, { scroll: false });
+    } else {
+      router.push("/", { scroll: false });
     }
   }
 
