@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { MOCK_PROPERTIES } from "@/data/properties";
+import { getPropertyById } from "@/services/propertyService";
 import TourBookingCard from "@/components/TourBookingCard";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,7 @@ export default async function PropertyPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const property = MOCK_PROPERTIES.find((p) => p.id === Number(id));
+  const property = await getPropertyById(Number(id));
   if (!property) notFound();
 
   const status = STATUS_CONFIG[property.status];

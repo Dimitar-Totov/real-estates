@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import HeroSearch from "@/components/HeroSearch";
 import PropertyCard from "@/components/PropertyCard";
-import { MOCK_PROPERTIES } from "@/data/properties";
+import { searchProperties } from "@/services/propertyService";
 import NavLink from "@/components/NavLink";
 
 export const dynamic = "force-dynamic";
@@ -36,20 +36,6 @@ const FEATURES = [
   },
 ];
 
-function searchProperties(q: string, status?: string) {
-  const term = q.toLowerCase().trim();
-  return MOCK_PROPERTIES.filter((p) => {
-    if (status && p.status !== status) return false;
-    return (
-      p.city.toLowerCase().includes(term) ||
-      p.address.toLowerCase().includes(term) ||
-      p.state.toLowerCase().includes(term) ||
-      p.zipCode.includes(term) ||
-      p.title.toLowerCase().includes(term)
-    );
-  });
-}
-
 export default async function HomePage({
   searchParams,
 }: {
@@ -57,7 +43,7 @@ export default async function HomePage({
 }) {
   const { q, status } = await searchParams;
   const query   = q?.trim() ?? "";
-  const results = query ? searchProperties(query, status) : [];
+  const results = query ? await searchProperties(query, status) : [];
   const hasSearch = query.length > 0;
 
   return (

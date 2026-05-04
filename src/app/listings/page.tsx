@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import PropertyCard from "@/components/PropertyCard";
 import PropertyFilters from "@/components/PropertyFilters";
-import { MOCK_PROPERTIES } from "@/data/properties";
+import { getAllProperties } from "@/services/propertyService";
 
 export const dynamic = "force-dynamic";
 
@@ -22,17 +22,7 @@ export default async function ListingsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-
-  const filtered = MOCK_PROPERTIES.filter((p) => {
-    if (params.city     && !p.city.toLowerCase().includes(params.city.toLowerCase())) return false;
-    if (params.type     && p.type   !== params.type)   return false;
-    if (params.status   && p.status !== params.status) return false;
-    if (params.minPrice && Number(p.price) < Number(params.minPrice)) return false;
-    if (params.maxPrice && Number(p.price) > Number(params.maxPrice)) return false;
-    if (params.minBeds  && (p.bedrooms  == null || p.bedrooms  < Number(params.minBeds)))  return false;
-    if (params.minBaths && (p.bathrooms == null || p.bathrooms < Number(params.minBaths))) return false;
-    return true;
-  });
+  const filtered = await getAllProperties(params);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
