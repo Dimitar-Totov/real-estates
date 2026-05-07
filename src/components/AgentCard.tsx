@@ -1,3 +1,5 @@
+"use client";
+
 interface Agent {
   id: string;
   name: string;

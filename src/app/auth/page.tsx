@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff, Lock, Mail, User, Home, Building2 } from "lucide-react";
 
 type Mode = "login" | "register";
 
@@ -25,26 +27,92 @@ const C = {
   },
 } as const;
 
-const SOCIAL = [
-  { icon: "fab fa-google",     label: "Google",   color: "#ea4335" },
-  { icon: "fab fa-github",     label: "GitHub",   color: "#24292e" },
-  { icon: "fab fa-linkedin-in",label: "LinkedIn", color: "#0077b5" },
-] as const;
+function Field({
+  label, icon, type, value, onChange, placeholder, required = true, focusColor, focusShadow, trailing,
+}: {
+  label: string; icon: ReactNode; type: string;
+  value: string; onChange: (v: string) => void;
+  placeholder: string; required?: boolean;
+  focusColor: string; focusShadow: string;
+  trailing?: { icon: ReactNode; onClick: () => void; label: string };
+}) {
+  return (
+    <div style={{ marginBottom: "20px" }}>
+      <label style={{
+        display: "block", fontSize: "13px", fontWeight: 600,
+        textTransform: "uppercase", letterSpacing: "0.05em", color: "#555", marginBottom: "8px",
+      }}>
+        {label}
+      </label>
+      <div style={{ position: "relative" }}>
+        <span style={{
+          position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)",
+          color: "#c0c0c0", fontSize: "14px", pointerEvents: "none", display: "inline-flex",
+          alignItems: "center", justifyContent: "center",
+        }}>{icon}</span>
+        <input
+          className="auth-input"
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          style={{
+            "--fc": focusColor, "--fs": focusShadow,
+            width: "100%", boxSizing: "border-box",
+            padding: trailing ? "11px 44px 11px 40px" : "11px 14px 11px 40px",
+            borderRadius: "8px", border: "1.5px solid #e0e0e0", fontSize: "14px",
+            fontFamily: "inherit", background: "#fff", outline: "none",
+            transition: "border-color 0.25s ease, box-shadow 0.25s ease",
+          } as React.CSSProperties}
+        />
+        {trailing && (
+          <button
+            type="button"
+            aria-label={trailing.label}
+            onClick={trailing.onClick}
+            style={{
+              position: "absolute",
+              right: "12px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              border: "none",
+              background: "transparent",
+              color: "#68707a",
+              padding: "6px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >
+            {trailing.icon}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function AuthPage() {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [visible, setVisible] = useState(true);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [remember, setRemember] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const isLogin = mode === "login";
   const c = C[mode];
 
   const switchMode = () => {
     setVisible(false);
+    setError("");
     setTimeout(() => {
       setMode((m) => (m === "login" ? "register" : "login"));
       setEmail(""); setUsername(""); setPassword(""); setConfirm("");
@@ -52,10 +120,51 @@ export default function AuthPage() {
     }, 380);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault();
-    if (!isLogin && password !== confirm) { alert("Passwords do not match!"); return; }
-    alert(isLogin ? "Signed in successfully!" : "Account created successfully!");
+    setError("");
+
+    if (!isLogin && password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (isLogin) {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error ?? "Login failed."); return; }
+        router.push("/");
+        router.refresh();
+      } else {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, email, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error ?? "Registration failed."); return; }
+        // Auto-login with the just-registered credentials
+        const loginRes = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const loginData = await loginRes.json();
+        if (!loginRes.ok) { setError(loginData.error ?? "Login failed."); return; }
+        router.push("/");
+        router.refresh();
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fade: React.CSSProperties = {
@@ -64,70 +173,8 @@ export default function AuthPage() {
     transition: "opacity 0.35s ease, transform 0.35s ease",
   };
 
-  const LABEL: React.CSSProperties = {
-    display: "block",
-    fontSize: "13px",
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-    color: "#555",
-    marginBottom: "8px",
-  };
-
-  const ICON: React.CSSProperties = {
-    position: "absolute",
-    left: "14px",
-    top: "50%",
-    transform: "translateY(-50%)",
-    color: "#c0c0c0",
-    fontSize: "13px",
-    pointerEvents: "none",
-  };
-
-  const mkInput = (): React.CSSProperties => ({
-    width: "100%",
-    boxSizing: "border-box",
-    padding: "11px 14px 11px 40px",
-    borderRadius: "8px",
-    border: "1.5px solid #e0e0e0",
-    fontSize: "14px",
-    fontFamily: "inherit",
-    background: "#fff",
-    outline: "none",
-    transition: "border-color 0.25s ease, box-shadow 0.25s ease",
-  });
-
-  const Field = ({
-    label, icon, type, value, onChange, placeholder, required = true,
-  }: {
-    label: string; icon: string; type: string;
-    value: string; onChange: (v: string) => void;
-    placeholder: string; required?: boolean;
-  }) => (
-    <div style={{ marginBottom: "20px" }}>
-      <label style={LABEL}>{label}</label>
-      <div style={{ position: "relative" }}>
-        <i className={icon} style={ICON} />
-        <input
-          className="auth-input"
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          required={required}
-          style={{ "--fc": c.focus, "--fs": c.shadow, ...mkInput() } as React.CSSProperties}
-        />
-      </div>
-    </div>
-  );
-
   return (
     <>
-      <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        crossOrigin="anonymous"
-      />
       <style>{`
         @keyframes slideUp {
           from { opacity: 0; transform: translateY(30px); }
@@ -141,17 +188,15 @@ export default function AuthPage() {
         .auth-btn {
           transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
         }
-        .auth-btn:hover {
+        .auth-btn:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 8px 25px rgba(0,0,0,0.18);
           filter: brightness(1.06);
         }
-        .auth-btn:active { transform: translateY(0); box-shadow: none; }
-        .social-btn { transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease; }
-        .social-btn:hover { background: #f5f5f5 !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .auth-btn:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+        .auth-btn:disabled { opacity: 0.65; cursor: not-allowed; }
         .switch-btn { background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; }
         .switch-btn:hover { text-decoration: underline; }
-        .forgot-link:hover { opacity: 0.7; }
       `}</style>
 
       <div
@@ -179,7 +224,6 @@ export default function AuthPage() {
             className="md:w-2/5 flex flex-col items-center justify-center text-center relative"
             style={{ minHeight: "220px", padding: "40px 32px" }}
           >
-            {/* Two gradient layers fade between each other */}
             <div style={{
               position: "absolute", inset: 0,
               background: "linear-gradient(135deg, #a8d5ff 0%, #b8c5f6 100%)",
@@ -198,7 +242,7 @@ export default function AuthPage() {
                 className="text-[60px] md:text-[80px]"
                 style={{ marginBottom: "20px", color: c.text, transition: "color 0.4s ease", lineHeight: 1 }}
               >
-                <i className={isLogin ? "fas fa-building" : "fas fa-home"} />
+                {isLogin ? <Building2 size={64} /> : <Home size={64} />}
               </div>
               <h2 style={{
                 fontSize: "clamp(22px, 4vw, 32px)",
@@ -237,44 +281,54 @@ export default function AuthPage() {
                 {isLogin ? "Enter your credentials to continue" : "Fill in your details to get started"}
               </p>
 
+              {error && (
+                <div style={{
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  background: "#fff0f0",
+                  border: "1px solid #ffd0d0",
+                  color: "#c0392b",
+                  fontSize: "13px",
+                  marginBottom: "20px",
+                }}>
+                  {error}
+                </div>
+              )}
+
               <form onSubmit={handleSubmit}>
                 {!isLogin && (
-                  <Field label="Username" icon="fas fa-user" type="text"
-                    value={username} onChange={setUsername} placeholder="johndoe" />
+<Field label="Username" icon={<User size={16} />} type="text"
+                  value={username} onChange={setUsername} placeholder="johndoe"
+                  focusColor={c.focus} focusShadow={c.shadow} />
                 )}
-                <Field label="Email Address" icon="fas fa-envelope" type="email"
-                  value={email} onChange={setEmail} placeholder="you@example.com" />
-                <Field label="Password" icon="fas fa-lock" type="password"
-                  value={password} onChange={setPassword} placeholder="••••••••" />
+                <Field label="Email Address" icon={<Mail size={16} />} type="email"
+                  value={email} onChange={setEmail} placeholder="you@example.com"
+                  focusColor={c.focus} focusShadow={c.shadow} />
+                <Field label="Password" icon={<Lock size={16} />} type={showPassword ? "text" : "password"}
+                  value={password} onChange={setPassword} placeholder="••••••••"
+                  focusColor={c.focus} focusShadow={c.shadow}
+                  trailing={{
+                    icon: showPassword ? <Eye size={16} /> : <EyeOff size={16} />,
+                    onClick: () => setShowPassword((prev) => !prev),
+                    label: showPassword ? "Hide password" : "Show password",
+                  }}
+                />
                 {!isLogin && (
-                  <Field label="Confirm Password" icon="fas fa-lock" type="password"
-                    value={confirm} onChange={setConfirm} placeholder="••••••••" />
-                )}
-
-                {isLogin && (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", color: "#555", cursor: "pointer" }}>
-                      <input
-                        type="checkbox"
-                        checked={remember}
-                        onChange={(e) => setRemember(e.target.checked)}
-                        style={{ accentColor: c.focus, width: "15px", height: "15px" }}
-                      />
-                      Remember me
-                    </label>
-                    <a
-                      href="#"
-                      className="forgot-link"
-                      style={{ fontSize: "13px", color: c.link, textDecoration: "none", fontWeight: 500, transition: "opacity 0.2s ease" }}
-                    >
-                      Forgot password?
-                    </a>
-                  </div>
+                  <Field label="Confirm Password" icon={<Lock size={16} />} type={showConfirmPassword ? "text" : "password"}
+                    value={confirm} onChange={setConfirm} placeholder="••••••••"
+                    focusColor={c.focus} focusShadow={c.shadow}
+                    trailing={{
+                      icon: showConfirmPassword ? <Eye size={16} /> : <EyeOff size={16} />,
+                      onClick: () => setShowConfirmPassword((prev) => !prev),
+                      label: showConfirmPassword ? "Hide confirm password" : "Show confirm password",
+                    }}
+                  />
                 )}
 
                 <button
                   type="submit"
                   className="auth-btn"
+                  disabled={loading}
                   style={{
                     width: "100%",
                     padding: "13px",
@@ -284,52 +338,15 @@ export default function AuthPage() {
                     color: "#fff",
                     fontSize: "15px",
                     fontWeight: 600,
-                    cursor: "pointer",
+                    cursor: loading ? "not-allowed" : "pointer",
                     marginBottom: "24px",
                     fontFamily: "inherit",
                     letterSpacing: "0.02em",
                   }}
                 >
-                  {isLogin ? "Sign In" : "Create Account"}
+                  {loading ? "Please wait…" : isLogin ? "Sign In" : "Create Account"}
                 </button>
               </form>
-
-              {/* Divider */}
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-                <div style={{ flex: 1, height: "1px", background: "#ebebeb" }} />
-                <span style={{ fontSize: "12px", color: "#c0c0c0", whiteSpace: "nowrap" }}>or continue with</span>
-                <div style={{ flex: 1, height: "1px", background: "#ebebeb" }} />
-              </div>
-
-              {/* Social buttons */}
-              <div style={{ display: "flex", gap: "10px", marginBottom: "28px" }}>
-                {SOCIAL.map(({ icon, label, color }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    className="social-btn"
-                    onClick={() => alert(`${label} ${isLogin ? "login" : "signup"} coming soon!`)}
-                    style={{
-                      flex: 1,
-                      padding: "9px 6px",
-                      borderRadius: "8px",
-                      border: "1.5px solid #e8e8e8",
-                      background: "#fff",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px",
-                      fontSize: "13px",
-                      color: "#555",
-                      fontFamily: "inherit",
-                    }}
-                  >
-                    <i className={icon} style={{ color, fontSize: "15px" }} />
-                    <span>{label}</span>
-                  </button>
-                ))}
-              </div>
 
               {/* Switch mode */}
               <p style={{ textAlign: "center", fontSize: "14px", color: "#aaa", margin: 0 }}>

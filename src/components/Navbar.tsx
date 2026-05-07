@@ -1,8 +1,17 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useState, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
 import NavLink from "@/components/NavLink";
+
+type UserInfo = { id: number; username: string; role: string };
+
+function parseUserCookie(): UserInfo | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)user-info=([^;]*)/);
+  if (!match) return null;
+  try { return JSON.parse(decodeURIComponent(match[1])); } catch { return null; }
+}
 
 /* ── Icons ───────────────────────────────────────────────────── */
 const ChevronIcon = ({ className }: { className?: string }) => (
@@ -99,14 +108,24 @@ function DropdownLink({ item, onClose }: { item: DropdownItem; onClose: () => vo
 
 /* ── Component ───────────────────────────────────────────────── */
 export default function Navbar() {
-  // usePathname is used here only to drive the header background style
   const pathname = usePathname();
-  const isHome = pathname === "/";
+  const router   = useRouter();
+  const isHome   = pathname === "/";
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown]         = useState<string | null>(null);
   const [mobileExpanded, setMobileExpanded]     = useState<string | null>(null);
+  const [user, setUser]                         = useState<UserInfo | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { setUser(parseUserCookie()); }, [pathname]);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setUser(null);
+    router.push("/");
+    router.refresh();
+  };
 
   const onEnter = (label: string) => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -240,15 +259,32 @@ export default function Navbar() {
           </nav>
 
           {/* ── Desktop auth ── */}
-          <div className="hidden md:block">
-            <NavLink
-              href="/auth"
-              exact
-              className="text-sm px-6 py-2 rounded-lg font-medium transition-colors border border-white/70 text-white hover:bg-white hover:text-[#1a1a1a]"
-              activeClassName="!bg-white !text-[#1a1a1a] !border-white"
-            >
-              Join / Sign In
-            </NavLink>
+          <div className="hidden md:flex items-center gap-3">
+            {user ? (
+              <>
+                <span className="text-sm text-white/70 font-medium">
+                  {user.role === "admin" && (
+                    <span className="mr-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
+                  )}
+                  {user.username}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm px-5 py-2 rounded-lg font-medium transition-colors border border-white/50 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/70"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <NavLink
+                href="/auth"
+                exact
+                className="text-sm px-6 py-2 rounded-lg font-medium transition-colors border border-white/70 text-white hover:bg-white hover:text-[#1a1a1a]"
+                activeClassName="!bg-white !text-[#1a1a1a] !border-white"
+              >
+                Join / Sign In
+              </NavLink>
+            )}
           </div>
 
           {/* ── Mobile burger ── */}
@@ -318,15 +354,32 @@ export default function Navbar() {
                   </NavLink>
                 )
               )}
-              <NavLink
-                href="/auth"
-                exact
-                className="block text-sm px-3 py-3 rounded-lg font-medium text-center mt-2 transition-colors border border-white/70 text-white hover:bg-white hover:text-[#1a1a1a]"
-                activeClassName="!bg-white !text-[#1a1a1a] !border-white"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Join / Sign In
-              </NavLink>
+              {user ? (
+                <div className="mt-2 flex items-center justify-between px-3 py-3 rounded-lg border border-white/20 bg-white/5">
+                  <span className="text-sm text-white/80 font-medium">
+                    {user.role === "admin" && (
+                      <span className="mr-1.5 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
+                    )}
+                    {user.username}
+                  </span>
+                  <button
+                    onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
+                    className="text-sm text-white/70 hover:text-white transition-colors font-medium"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <NavLink
+                  href="/auth"
+                  exact
+                  className="block text-sm px-3 py-3 rounded-lg font-medium text-center mt-2 transition-colors border border-white/70 text-white hover:bg-white hover:text-[#1a1a1a]"
+                  activeClassName="!bg-white !text-[#1a1a1a] !border-white"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Join / Sign In
+                </NavLink>
+              )}
             </nav>
           </div>
         )}
