@@ -15,7 +15,7 @@ const STATUS_COLORS: Record<Property["status"], string> = {
   rented:   "bg-gray-400 text-white",
 };
 
-export default function PropertyCard({ property }: { property: Property }) {
+export default function PropertyCard({ property, coverImage }: { property: Property; coverImage?: string | null }) {
   return (
     <Link
       href={`/properties/${property.id}`}
@@ -23,12 +23,21 @@ export default function PropertyCard({ property }: { property: Property }) {
     >
       {/* ── Image area ── */}
       <div className="relative h-52 bg-gradient-to-br from-slate-100 via-gray-50 to-slate-200 overflow-hidden flex items-center justify-center">
-        <svg
-          className="w-20 h-20 text-gray-200 group-hover:scale-110 transition-transform duration-500"
-          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.8}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-        </svg>
+        {coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={coverImage}
+            alt={property.title}
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <svg
+            className="w-20 h-20 text-gray-200 group-hover:scale-110 transition-transform duration-500"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.8}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+          </svg>
+        )}
 
         {/* Status badge */}
         <span className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_COLORS[property.status]}`}>

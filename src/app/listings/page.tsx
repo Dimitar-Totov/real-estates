@@ -3,6 +3,7 @@ import Link from "next/link";
 import PropertyCard from "@/components/PropertyCard";
 import PropertyFilters from "@/components/PropertyFilters";
 import { getAllProperties } from "@/services/propertyService";
+import { getPropertyCoverImage } from "@/services/imagesService";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function ListingsPage({
 }) {
   const params = await searchParams;
   const filtered = await getAllProperties(params);
+  const coverImages = await Promise.all(filtered.map((p) => getPropertyCoverImage(p.id)));
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -67,8 +69,8 @@ export default async function ListingsPage({
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-              {filtered.map((property) => (
-                <PropertyCard key={property.id} property={property} />
+              {filtered.map((property, i) => (
+                <PropertyCard key={property.id} property={property} coverImage={coverImages[i]} />
               ))}
             </div>
           )}
