@@ -262,12 +262,17 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
-                <span className="text-sm text-white/70 font-medium">
+                <NavLink
+                  href="/profile"
+                  exact
+                  className="text-sm text-white/70 hover:text-white font-medium transition-colors"
+                  activeClassName="!text-white"
+                >
                   {user.role === "admin" && (
                     <span className="mr-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
                   )}
                   {user.username}
-                </span>
+                </NavLink>
                 <button
                   onClick={handleLogout}
                   className="text-sm px-5 py-2 rounded-lg font-medium transition-colors border border-white/50 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/70"
@@ -356,12 +361,18 @@ export default function Navbar() {
               )}
               {user ? (
                 <div className="mt-2 flex items-center justify-between px-3 py-3 rounded-lg border border-white/20 bg-white/5">
-                  <span className="text-sm text-white/80 font-medium">
+                  <NavLink
+                    href="/profile"
+                    exact
+                    className="text-sm text-white/80 hover:text-white font-medium transition-colors"
+                    activeClassName="!text-white"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
                     {user.role === "admin" && (
                       <span className="mr-1.5 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
                     )}
                     {user.username}
-                  </span>
+                  </NavLink>
                   <button
                     onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
                     className="text-sm text-white/70 hover:text-white transition-colors font-medium"

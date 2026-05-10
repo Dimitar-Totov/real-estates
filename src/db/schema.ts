@@ -17,6 +17,12 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   role: userRoleEnum("role").notNull().default("user"),
+  avatarKey: text("avatar_key"),
+  coverKey: text("cover_key"),
+  location: text("location"),
+  facebookUrl: text("facebook_url"),
+  linkedinUrl: text("linkedin_url"),
+  twitterUrl: text("twitter_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -79,3 +85,18 @@ export type Property = typeof properties.$inferSelect;
 export type NewProperty = typeof properties.$inferInsert;
 export type Inquiry = typeof inquiries.$inferSelect;
 export type NewInquiry = typeof inquiries.$inferInsert;
+
+export const profiles = pgTable("profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  officePhone: text("office_phone"),
+  mobilePhone: text("mobile_phone"),
+  contactEmail: text("contact_email"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type Profile = typeof profiles.$inferSelect;
+export type NewProfile = typeof profiles.$inferInsert;

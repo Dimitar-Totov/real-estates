@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 // Routes that require a logged-in user
-const PROTECTED = ["/properties/new", "/feed"];
+const PROTECTED = ["/properties/new", "/feed", "/profile"];
 
 // Routes that logged-in users should not visit (redirect to home)
 const GUEST_ONLY = ["/auth"];
@@ -37,5 +37,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/properties/new", "/feed", "/auth"],
+  matcher: ["/properties/new", "/feed", "/profile", "/auth"],
 };

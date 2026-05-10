@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1778424557096,
+      "tag": "0000_elite_lilith",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778425703056,
+      "tag": "0001_easy_spyke",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778428985011,
+      "tag": "0002_free_wolfpack",
+      "breakpoints": true
+    }
+  ]
+}
