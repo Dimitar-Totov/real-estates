@@ -100,3 +100,28 @@ export const profiles = pgTable("profiles", {
 
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
+
+export const visitingStatusEnum = pgEnum("visiting_status", [
+  "pending",
+  "confirmed",
+  "cancelled",
+]);
+
+export const propertyVisitings = pgTable("property_visitings", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  propertyId: integer("property_id")
+    .notNull()
+    .references(() => properties.id, { onDelete: "cascade" }),
+  visitDate: timestamp("visit_date").notNull(),
+  hour: integer("hour").notNull(),
+  status: visitingStatusEnum("status").notNull().default("pending"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type PropertyVisiting = typeof propertyVisitings.$inferSelect;
+export type NewPropertyVisiting = typeof propertyVisitings.$inferInsert;
