@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProfilePage from "@/components/ProfilePage";
+import { type VisitingRow } from "@/components/VisitingPropertyCard";
 
 type UserProfile = {
   id: number;
@@ -22,12 +23,18 @@ type UserProfile = {
 export default function ProfileRoute() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [visitings, setVisitings] = useState<VisitingRow[]>([]);
 
   useEffect(() => {
     fetch("/api/user/me")
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setProfile)
       .catch(() => router.replace("/auth"));
+
+    fetch("/api/visitings/my")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setVisitings)
+      .catch(() => {});
   }, [router]);
 
   const makeUploadHandler = (type: "avatar" | "cover") => async (file: File): Promise<string> => {
@@ -94,27 +101,28 @@ export default function ProfileRoute() {
   if (!profile) return null;
 
   return (
-    <ProfilePage
-      avatarImage={profile.avatarUrl ?? ""}
-      coverImage={profile.coverUrl ?? ""}
-      name={profile.username}
-      description={profile.role === "admin" ? "Administrator" : "Member"}
-      location={profile.location ?? ""}
-      socials={{
-        facebook: profile.facebookUrl ?? undefined,
-        linkedin: profile.linkedinUrl ?? undefined,
-        twitter: profile.twitterUrl ?? undefined,
-      }}
-      phone={{ office: profile.officePhone ?? "", mobile: profile.mobilePhone ?? "" }}
-      email={profile.contactEmail ?? ""}
-      properties={[]}
-      onPropertyClick={(p) => router.push(`/properties/${p.id}`)}
-      onAvatarChange={makeUploadHandler("avatar")}
-      onCoverChange={makeUploadHandler("cover")}
-      isOwnProfile={true}
-      onLocationChange={handleLocationChange}
-      onSocialsChange={handleSocialsChange}
-      onContactChange={handleContactChange}
-    />
+    <>
+      <ProfilePage
+        avatarImage={profile.avatarUrl ?? ""}
+        coverImage={profile.coverUrl ?? ""}
+        name={profile.username}
+        description={profile.role === "admin" ? "Administrator" : "Member"}
+        location={profile.location ?? ""}
+        socials={{
+          facebook: profile.facebookUrl ?? undefined,
+          linkedin: profile.linkedinUrl ?? undefined,
+          twitter: profile.twitterUrl ?? undefined,
+        }}
+        phone={{ office: profile.officePhone ?? "", mobile: profile.mobilePhone ?? "" }}
+        email={profile.contactEmail ?? ""}
+        visitings={visitings}
+        onAvatarChange={makeUploadHandler("avatar")}
+        onCoverChange={makeUploadHandler("cover")}
+        isOwnProfile={true}
+        onLocationChange={handleLocationChange}
+        onSocialsChange={handleSocialsChange}
+        onContactChange={handleContactChange}
+      />
+    </>
   );
 }

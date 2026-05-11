@@ -1,21 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Bath,
-  Bed,
   Camera,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   Mail,
   MapPin,
-  Maximize2,
   PenLine,
   Phone,
   X,
 } from "lucide-react";
+import VisitingPropertyCard, { type VisitingRow } from "@/components/VisitingPropertyCard";
 
 /* ── Inline SVG brand icons (not in this lucide-react build) ── */
 const FacebookSvg = ({ className = "w-5 h-5 sm:w-4 sm:h-4 shrink-0" }: { className?: string }) => (
@@ -72,6 +68,7 @@ interface ProfilePageProps {
   onChat?: () => void;
   properties?: PropertyItem[];
   onPropertyClick?: (property: PropertyItem) => void;
+  visitings?: VisitingRow[];
   /** Return the new public URL on success, or throw on failure. */
   onAvatarChange?: (file: File) => Promise<string>;
   onCoverChange?: (file: File) => Promise<string>;
@@ -89,8 +86,7 @@ export default function ProfilePage({
   socials = {},
   phone,
   email,
-  properties = [],
-  onPropertyClick,
+  visitings = [],
   onAvatarChange,
   onCoverChange,
   isOwnProfile = false,
@@ -162,37 +158,6 @@ export default function ProfilePage({
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Carousel
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    const el = carouselRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 0);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-  }, []);
-
-  useEffect(() => {
-    const el = carouselRef.current;
-    if (!el) return;
-    checkScroll();
-    el.addEventListener("scroll", checkScroll, { passive: true });
-    const ro = new ResizeObserver(checkScroll);
-    ro.observe(el);
-    return () => {
-      el.removeEventListener("scroll", checkScroll);
-      ro.disconnect();
-    };
-  }, [checkScroll, properties]);
-
-  const scroll = (dir: "left" | "right") => {
-    carouselRef.current?.scrollBy({
-      left: dir === "left" ? -280 : 280,
-      behavior: "smooth",
-    });
-  };
 
   const handleFileSelect = async (
     file: File,
@@ -685,72 +650,16 @@ export default function ProfilePage({
           )}
         </div>
 
-        {/* Right: Properties carousel */}
+        {/* Right: Requested showings grid */}
         <div className="flex-1 min-w-0">
-          {properties.length === 0 ? (
-            <p className="text-sm text-gray-400 py-6">No properties listed yet.</p>
+          <h2 className="text-base font-semibold text-gray-700 mb-4">Requested Showings</h2>
+          {visitings.length === 0 ? (
+            <p className="text-sm text-gray-400 py-6">No showings requested yet.</p>
           ) : (
-            <div className="relative">
-              {canScrollLeft && (
-                <button
-                  onClick={() => scroll("left")}
-                  aria-label="Scroll left"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-8 h-8 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4 text-gray-600" />
-                </button>
-              )}
-
-              <div
-                ref={carouselRef}
-                className="flex gap-4 overflow-x-auto scroll-smooth pb-2 [&::-webkit-scrollbar]:hidden"
-                style={{ scrollbarWidth: "none" }}
-              >
-                {properties.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => onPropertyClick?.(p)}
-                    className="shrink-0 w-56 rounded-2xl border border-white/60 bg-white/90 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden text-left"
-                  >
-                    <div className="h-36 bg-gray-100 overflow-hidden">
-                      {p.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200" />
-                      )}
-                    </div>
-                    <div className="p-3 flex flex-col gap-1">
-                      <p className="text-sm font-bold text-gray-900 leading-tight">{p.price}</p>
-                      <p className="text-xs text-gray-600 line-clamp-1">{p.title}</p>
-                      <div className="flex items-center gap-2.5 mt-1 text-xs text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <Bed className="w-3.5 h-3.5" />
-                          {p.beds} bd
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Bath className="w-3.5 h-3.5" />
-                          {p.baths} ba
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Maximize2 className="w-3.5 h-3.5" />
-                          {p.sqft.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {canScrollRight && (
-                <button
-                  onClick={() => scroll("right")}
-                  aria-label="Scroll right"
-                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-8 h-8 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
-                >
-                  <ChevronRight className="w-4 h-4 text-gray-600" />
-                </button>
-              )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              {visitings.map((v) => (
+                <VisitingPropertyCard key={v.visitingId} visiting={v} />
+              ))}
             </div>
           )}
         </div>
