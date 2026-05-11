@@ -173,7 +173,18 @@ export default function Navbar() {
           {/* ── Desktop nav ── */}
           <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
             {NAV_LINKS.map((link) =>
-              link.dropdown ? (
+              link.label === "Real Estate Agents" && user?.role === "admin" ? (
+                <Link
+                  key={link.label}
+                  href="/agents"
+                  className={[
+                    "flex items-center text-white/90 hover:text-white text-sm px-3 py-2 rounded-lg hover:bg-white/10 transition-colors whitespace-nowrap",
+                    pathname === "/agents" ? "!text-white bg-white/10" : "",
+                  ].join(" ")}
+                >
+                  {link.label}
+                </Link>
+              ) : link.dropdown ? (
                 <div key={link.label} className="relative" onMouseEnter={() => onEnter(link.label)} onMouseLeave={onLeave}>
                   <button className={[
                     "flex items-center gap-1 text-sm px-3 py-2 rounded-lg transition-all duration-150 whitespace-nowrap",
@@ -330,7 +341,19 @@ export default function Navbar() {
           <div className="md:hidden border-t border-white/10 bg-black/30 backdrop-blur-md">
             <nav className="px-4 py-4 space-y-1">
               {NAV_LINKS.map((link) =>
-                link.dropdown ? (
+                link.label === "Real Estate Agents" && user?.role === "admin" ? (
+                  <Link
+                    key={link.label}
+                    href="/agents"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={[
+                      "flex items-center text-white text-sm px-3 py-3 rounded-lg hover:bg-white/10 transition-colors",
+                      pathname === "/agents" ? "bg-white/10" : "",
+                    ].join(" ")}
+                  >
+                    {link.label}
+                  </Link>
+                ) : link.dropdown ? (
                   <div key={link.label}>
                     <button
                       className="w-full flex items-center justify-between text-white text-sm px-3 py-3 rounded-lg hover:bg-white/10 transition-colors"

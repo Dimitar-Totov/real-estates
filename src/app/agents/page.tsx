@@ -1,5 +1,7 @@
-import AgentCard from "@/components/AgentCard";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/jwt";
+import AgentsGrid from "@/components/AgentsGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,13 @@ export default async function AgentsPage({
   const params = await searchParams;
   const sort     = params.sort;
   const featured = params.featured === "true";
+
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  let isAdmin = false;
+  if (token) {
+    try { isAdmin = verifyToken(token).role === "admin"; } catch { /* invalid token */ }
+  }
 
   let agents = [...ALL_AGENTS];
 
@@ -97,24 +106,7 @@ export default async function AgentsPage({
       </div>
 
       {/* ── Grid ── */}
-      {agents.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-gray-100 shadow-sm text-center">
-          <svg className="w-16 h-16 mb-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-          <p className="text-lg font-semibold text-gray-700 mb-1">No agents found</p>
-          <p className="text-sm text-gray-400 mb-5">Try a different filter</p>
-          <Link href="/agents" className="text-sm font-medium text-[#CC0000] hover:underline">
-            View all agents
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-          {agents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
-          ))}
-        </div>
-      )}
+      <AgentsGrid agents={agents} isAdmin={isAdmin} />
     </div>
   );
 }

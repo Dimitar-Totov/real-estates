@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { Trash2, AlertTriangle } from "lucide-react";
+
 interface Agent {
   id: string;
   name: string;
@@ -13,7 +16,25 @@ interface Agent {
   email: string;
 }
 
-export default function AgentCard({ agent }: { agent: Agent }) {
+export default function AgentCard({ agent, isAdmin = false, onDelete }: {
+  agent: Agent;
+  isAdmin?: boolean;
+  onDelete?: (id: string) => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const handleDelete = () => {
+    setRemoving(true);
+    setTimeout(() => onDelete?.(agent.id), 350);
+  };
+
+  if (removing) {
+    return (
+      <div className="rounded-xl border border-red-100 bg-red-50 h-full min-h-[340px] flex items-center justify-center opacity-0 scale-95 transition-all duration-350" />
+    );
+  }
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer group">
       {/* Agent Image */}
@@ -89,6 +110,41 @@ export default function AgentCard({ agent }: { agent: Agent }) {
               Email
             </button>
           </div>
+
+          {/* Delete — admin only */}
+          {isAdmin && (
+            <div className="pt-2 border-t border-gray-100 dark:border-gray-700 mt-1">
+              {confirming ? (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex-1 min-w-0">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                    <span className="truncate font-medium">Remove {agent.name}?</span>
+                  </div>
+                  <button
+                    onClick={handleDelete}
+                    className="shrink-0 bg-red-600 hover:bg-red-700 active:scale-95 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150"
+                  >
+                    Yes, delete
+                  </button>
+                  <button
+                    onClick={() => setConfirming(false)}
+                    className="shrink-0 text-xs font-medium text-gray-500 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-400 active:scale-[0.98] text-sm font-medium transition-all duration-150"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Agent
+                </button>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
     </div>

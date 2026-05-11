@@ -173,9 +173,16 @@ function StatCard({ label, value, bg }: { label: string; value: number; bg: stri
   );
 }
 
+// ── UserManagement ────────────────────────────────────────────────────────────
+
+function UserManagement() {
+  return <div className="min-h-[60vh]" />;
+}
+
 // ── AdminPanel ────────────────────────────────────────────────────────────────
 
 export default function AdminPanel() {
+  const [tab,    setTab]    = useState<"dashboard" | "user-management">("dashboard");
   const [show,   setShow]   = useState(false);
   const [period, setPeriod] = useState<"lifetime" | "monthly">("lifetime");
   const [search, setSearch] = useState("");
@@ -192,7 +199,34 @@ export default function AdminPanel() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8" style={{ fontFamily: "var(--font-inter), Inter, sans-serif" }}>
+    <div className="min-h-screen bg-gray-50" style={{ fontFamily: "var(--font-inter), Inter, sans-serif" }}>
+
+      {/* ── Tab switcher ───────────────────────────────────────────────────── */}
+      <div className="flex justify-center py-5 border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-1.5 bg-gray-100 rounded-2xl p-1.5" style={{ fontFamily: "var(--font-poppins), Poppins, sans-serif" }}>
+          {([
+            { key: "dashboard",       label: "Dashboard" },
+            { key: "user-management", label: "User Management" },
+          ] as const).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className="px-8 py-3 rounded-xl font-semibold text-sm transition-all duration-200 whitespace-nowrap"
+              style={
+                tab === key
+                  ? { backgroundColor: NAVY, color: "white", boxShadow: "0 4px 14px rgba(30,58,95,0.35)" }
+                  : { color: "#6b7280" }
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Content ────────────────────────────────────────────────────────── */}
+      {tab === "user-management" ? <UserManagement /> : (
+      <div className="p-4 sm:p-6 lg:p-8">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5 mb-8" style={fadeSlide(0)}>
@@ -308,6 +342,8 @@ export default function AdminPanel() {
           </div>
         </div>
       </div>
+      </div>
+      )}
     </div>
   );
 }
