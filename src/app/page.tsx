@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import HeroSearch from "@/components/HeroSearch";
 import PropertyCard from "@/components/PropertyCard";
 import { searchProperties } from "@/services/propertyService";
-import NavLink from "@/components/NavLink";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -86,18 +86,18 @@ export default async function HomePage({
               </p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
-              <NavLink
+              <Link
                 href={`/listings?city=${encodeURIComponent(query)}${status ? `&status=${status}` : ""}`}
                 className="text-sm font-semibold text-[#CC0000] hover:text-[#aa0000] transition-colors whitespace-nowrap"
               >
                 View all in Listings →
-              </NavLink>
-              <NavLink
+              </Link>
+              <Link
                 href="/"
                 className="text-sm text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap"
               >
                 Clear
-              </NavLink>
+              </Link>
             </div>
           </div>
 
@@ -111,12 +111,12 @@ export default async function HomePage({
               <p className="text-sm text-gray-400 mb-6 max-w-xs">
                 Try searching by city (e.g. &quot;Los Angeles&quot;), ZIP code, or address.
               </p>
-              <NavLink
+              <Link
                 href="/listings"
                 className="inline-flex items-center gap-1.5 bg-[#CC0000] hover:bg-[#aa0000] text-white text-sm font-semibold px-6 py-3 rounded-xl transition-colors"
               >
                 Browse all listings
-              </NavLink>
+              </Link>
             </div>
           ) : (
             /* ── Results grid ── */

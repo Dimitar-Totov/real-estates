@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import NavLink from "@/components/NavLink";
+import Link from "next/link";
 
 type UserInfo = { id: number; username: string; role: string };
 
@@ -11,6 +11,12 @@ function parseUserCookie(): UserInfo | null {
   const match = document.cookie.match(/(?:^|;\s*)user-info=([^;]*)/);
   if (!match) return null;
   try { return JSON.parse(decodeURIComponent(match[1])); } catch { return null; }
+}
+
+function useActive(href: string, exact = false) {
+  const pathname = usePathname();
+  const h = href.toString();
+  return exact ? pathname === h : pathname.startsWith(h);
 }
 
 /* ── Icons ───────────────────────────────────────────────────── */
@@ -81,17 +87,20 @@ const NAV_LINKS: NavLinkDef[] = [
       { label: "Featured Agents", href: "/agents?featured=true", icon: icons.badge,   description: "Editor's picks" },
     ],
   },
-  { label: "Feed",               dropdown: false, href: "/feed" },
+  { label: "Feed", dropdown: false, href: "/feed" },
 ];
 
 /* ── Shared dropdown item ────────────────────────────────────── */
 function DropdownLink({ item, onClose }: { item: DropdownItem; onClose: () => void }) {
+  const isActive = useActive(item.href);
   return (
-    <NavLink
+    <Link
       href={item.href}
-      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.07] transition-colors group"
-      activeClassName="bg-white/[0.07]"
       onClick={onClose}
+      className={[
+        "flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.07] transition-colors group",
+        isActive ? "bg-white/[0.07]" : "",
+      ].join(" ")}
     >
       <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.06] text-white/50 group-hover:text-white/90 group-hover:bg-white/[0.12] transition-colors shrink-0">
         {item.icon}
@@ -102,7 +111,7 @@ function DropdownLink({ item, onClose }: { item: DropdownItem; onClose: () => vo
           <div className="text-[11px] text-white/35 group-hover:text-white/55 transition-colors mt-0.5 truncate">{item.description}</div>
         )}
       </div>
-    </NavLink>
+    </Link>
   );
 }
 
@@ -135,6 +144,10 @@ export default function Navbar() {
     closeTimer.current = setTimeout(() => setOpenDropdown(null), 140);
   };
 
+  const isLogoActive = pathname === "/";
+  const isProfileActive = pathname === "/profile";
+  const isAuthActive = pathname === "/auth";
+
   return (
     <header
       className={[
@@ -147,13 +160,15 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         <div className="flex items-center justify-between h-16">
 
-          <NavLink
+          <Link
             href="/"
-            exact
-            className="text-white font-bold text-lg tracking-[0.2em] uppercase hover:opacity-80 transition-opacity shrink-0"
+            className={[
+              "text-white font-bold text-lg tracking-[0.2em] uppercase transition-opacity shrink-0",
+              isLogoActive ? "opacity-100" : "hover:opacity-80",
+            ].join(" ")}
           >
             RealEstate
-          </NavLink>
+          </Link>
 
           {/* ── Desktop nav ── */}
           <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
@@ -188,27 +203,31 @@ export default function Navbar() {
                     <div className="absolute -top-[5px] left-6 w-3 h-3 rotate-45 bg-[#111]/90 border-l border-t border-white/[0.08] rounded-tl-[2px]" />
 
                     <div className="relative p-3">
-                      {/* Featured row — Buy only */}
-                      {"featured" in link && link.featured && (
-                        <NavLink
-                          href={link.featured.href}
-                          exact
-                          className="flex items-center gap-3 px-3 py-3 mb-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] transition-colors group"
-                          activeClassName="bg-white/[0.14]"
-                          onClick={() => setOpenDropdown(null)}
-                        >
-                          <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 text-white/70 group-hover:text-white group-hover:bg-white/15 transition-colors shrink-0">
-                            {link.featured.icon}
-                          </span>
-                          <div>
-                            <div className="text-sm font-semibold text-white">{link.featured.label}</div>
-                            <div className="text-xs text-white/50 mt-0.5">{link.featured.description}</div>
-                          </div>
-                          <svg className="w-4 h-4 text-white/30 group-hover:text-white/60 ml-auto transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
-                        </NavLink>
-                      )}
+                      {/* Featured row */}
+                      {"featured" in link && link.featured && (() => {
+                        const featActive = pathname === link.featured.href;
+                        return (
+                          <Link
+                            href={link.featured.href}
+                            onClick={() => setOpenDropdown(null)}
+                            className={[
+                              "flex items-center gap-3 px-3 py-3 mb-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] transition-colors group",
+                              featActive ? "bg-white/[0.14]" : "",
+                            ].join(" ")}
+                          >
+                            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 text-white/70 group-hover:text-white group-hover:bg-white/15 transition-colors shrink-0">
+                              {link.featured.icon}
+                            </span>
+                            <div>
+                              <div className="text-sm font-semibold text-white">{link.featured.label}</div>
+                              <div className="text-xs text-white/50 mt-0.5">{link.featured.description}</div>
+                            </div>
+                            <svg className="w-4 h-4 text-white/30 group-hover:text-white/60 ml-auto transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M9 18l6-6-6-6"/></svg>
+                          </Link>
+                        );
+                      })()}
 
-                      {/* Sectioned layout (Real Estate Agents) */}
+                      {/* Sectioned layout */}
                       {"sections" in link && link.sections ? (
                         <div className="grid grid-cols-2 gap-x-2">
                           {link.sections.map((section) => (
@@ -225,7 +244,7 @@ export default function Navbar() {
                           ))}
                         </div>
                       ) : (
-                        /* Flat list (Buy / Sell) */
+                        /* Flat list */
                         <div className={link.label === "Buy" ? "grid grid-cols-2 gap-1" : "flex flex-col gap-1"}>
                           {(link.items ?? []).map((item) => (
                             <DropdownLink key={item.label} item={item} onClose={() => setOpenDropdown(null)} />
@@ -245,15 +264,16 @@ export default function Navbar() {
                   </div>
                 </div>
               ) : (
-                <NavLink
+                <Link
                   key={link.label}
                   href={link.href}
-                  exact
-                  className="flex items-center text-white/90 hover:text-white text-sm px-3 py-2 rounded-lg hover:bg-white/10 transition-colors whitespace-nowrap"
-                  activeClassName="!text-white bg-white/10"
+                  className={[
+                    "flex items-center text-white/90 hover:text-white text-sm px-3 py-2 rounded-lg hover:bg-white/10 transition-colors whitespace-nowrap",
+                    pathname === link.href ? "!text-white bg-white/10" : "",
+                  ].join(" ")}
                 >
                   {link.label}
-                </NavLink>
+                </Link>
               )
             )}
           </nav>
@@ -262,17 +282,18 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
-                <NavLink
+                <Link
                   href="/profile"
-                  exact
-                  className="text-sm text-white/70 hover:text-white font-medium transition-colors"
-                  activeClassName="!text-white"
+                  className={[
+                    "text-sm font-medium transition-colors",
+                    isProfileActive ? "text-white" : "text-white/70 hover:text-white",
+                  ].join(" ")}
                 >
                   {user.role === "admin" && (
                     <span className="mr-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
                   )}
                   {user.username}
-                </NavLink>
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="text-sm px-5 py-2 rounded-lg font-medium transition-colors border border-white/50 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/70"
@@ -281,14 +302,15 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <NavLink
+              <Link
                 href="/auth"
-                exact
-                className="text-sm px-6 py-2 rounded-lg font-medium transition-colors border border-white/70 text-white hover:bg-white hover:text-[#1a1a1a]"
-                activeClassName="!bg-white !text-[#1a1a1a] !border-white"
+                className={[
+                  "text-sm px-6 py-2 rounded-lg font-medium transition-colors border border-white/70 text-white hover:bg-white hover:text-[#1a1a1a]",
+                  isAuthActive ? "!bg-white !text-[#1a1a1a] !border-white" : "",
+                ].join(" ")}
               >
                 Join / Sign In
-              </NavLink>
+              </Link>
             )}
           </div>
 
@@ -319,60 +341,65 @@ export default function Navbar() {
                     {mobileExpanded === link.label && (
                       <div className="ml-3 mt-1 space-y-1 border-l border-white/20 pl-3">
                         {"featured" in link && link.featured && (
-                          <NavLink
+                          <Link
                             href={link.featured.href}
-                            exact
-                            className="block text-white/80 text-sm px-3 py-2 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                            activeClassName="!text-white bg-white/10"
                             onClick={() => { setIsMobileMenuOpen(false); setMobileExpanded(null); }}
+                            className={[
+                              "block text-white/80 text-sm px-3 py-2 rounded-lg hover:bg-white/10 hover:text-white transition-colors",
+                              pathname === link.featured.href ? "!text-white bg-white/10" : "",
+                            ].join(" ")}
                           >
                             {link.featured.label}
-                          </NavLink>
+                          </Link>
                         )}
                         {("sections" in link && link.sections
                           ? link.sections.flatMap((s) => s.items)
                           : link.items ?? []
                         ).map((item) => (
-                          <NavLink
+                          <Link
                             key={item.label}
                             href={item.href}
-                            className="block text-white/80 text-sm px-3 py-2 rounded-lg hover:bg-white/10 hover:text-white transition-colors"
-                            activeClassName="!text-white bg-white/10"
                             onClick={() => { setIsMobileMenuOpen(false); setMobileExpanded(null); }}
+                            className={[
+                              "block text-white/80 text-sm px-3 py-2 rounded-lg hover:bg-white/10 hover:text-white transition-colors",
+                              pathname === item.href ? "!text-white bg-white/10" : "",
+                            ].join(" ")}
                           >
                             {item.label}
-                          </NavLink>
+                          </Link>
                         ))}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <NavLink
+                  <Link
                     key={link.label}
                     href={link.href}
-                    exact
-                    className="flex items-center text-white text-sm px-3 py-3 rounded-lg hover:bg-white/10 transition-colors"
-                    activeClassName="bg-white/10"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    className={[
+                      "flex items-center text-white text-sm px-3 py-3 rounded-lg hover:bg-white/10 transition-colors",
+                      pathname === link.href ? "bg-white/10" : "",
+                    ].join(" ")}
                   >
                     {link.label}
-                  </NavLink>
+                  </Link>
                 )
               )}
               {user ? (
                 <div className="mt-2 flex items-center justify-between px-3 py-3 rounded-lg border border-white/20 bg-white/5">
-                  <NavLink
+                  <Link
                     href="/profile"
-                    exact
-                    className="text-sm text-white/80 hover:text-white font-medium transition-colors"
-                    activeClassName="!text-white"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    className={[
+                      "text-sm font-medium transition-colors",
+                      isProfileActive ? "text-white" : "text-white/80 hover:text-white",
+                    ].join(" ")}
                   >
                     {user.role === "admin" && (
                       <span className="mr-1.5 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
                     )}
                     {user.username}
-                  </NavLink>
+                  </Link>
                   <button
                     onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
                     className="text-sm text-white/70 hover:text-white transition-colors font-medium"
@@ -381,15 +408,16 @@ export default function Navbar() {
                   </button>
                 </div>
               ) : (
-                <NavLink
+                <Link
                   href="/auth"
-                  exact
-                  className="block text-sm px-3 py-3 rounded-lg font-medium text-center mt-2 transition-colors border border-white/70 text-white hover:bg-white hover:text-[#1a1a1a]"
-                  activeClassName="!bg-white !text-[#1a1a1a] !border-white"
                   onClick={() => setIsMobileMenuOpen(false)}
+                  className={[
+                    "block text-sm px-3 py-3 rounded-lg font-medium text-center mt-2 transition-colors border border-white/70 text-white hover:bg-white hover:text-[#1a1a1a]",
+                    isAuthActive ? "!bg-white !text-[#1a1a1a] !border-white" : "",
+                  ].join(" ")}
                 >
                   Join / Sign In
-                </NavLink>
+                </Link>
               )}
             </nav>
           </div>
