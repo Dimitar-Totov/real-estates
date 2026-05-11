@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
 const VISIBLE_COUNT = 3;
@@ -19,8 +20,6 @@ function generateWorkdays(startOffset: number, count: number): Date[] {
     if (isWeekday(cursor)) {
       if (checked >= startOffset) days.push(new Date(cursor));
       checked++;
-    } else {
-      // skip weekend but don't count toward offset
     }
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -77,7 +76,6 @@ function HorizontalSlider({ items, visibleCount = VISIBLE_COUNT }: SliderProps) 
 
   return (
     <div className="flex items-center gap-2">
-      {/* Left arrow */}
       <button
         onClick={() => slide("left")}
         aria-label="Previous"
@@ -93,13 +91,9 @@ function HorizontalSlider({ items, visibleCount = VISIBLE_COUNT }: SliderProps) 
         </svg>
       </button>
 
-      {/* Slides */}
       <div className="flex gap-2 flex-1 overflow-hidden">
         <div
-          className={[
-            "flex gap-2 w-full transition-all duration-220 ease-in-out",
-            translateClass,
-          ].join(" ")}
+          className={["flex gap-2 w-full transition-all ease-in-out", translateClass].join(" ")}
           style={{ transitionDuration: "220ms" }}
         >
           {visible.map((item, i) => (
@@ -110,7 +104,6 @@ function HorizontalSlider({ items, visibleCount = VISIBLE_COUNT }: SliderProps) 
         </div>
       </div>
 
-      {/* Right arrow */}
       <button
         onClick={() => slide("right")}
         aria-label="Next"
@@ -129,11 +122,69 @@ function HorizontalSlider({ items, visibleCount = VISIBLE_COUNT }: SliderProps) 
   );
 }
 
-export default function TourBookingCard() {
+type Status = "idle" | "loading" | "success" | "error" | "conflict" | "unauthenticated";
+
+export default function TourBookingCard({ propertyId }: { propertyId: number }) {
+  const router = useRouter();
   const workdays = useMemo(() => generateWorkdays(0, 30), []);
 
   const [selectedDateIdx, setSelectedDateIdx] = useState(0);
   const [selectedHour, setSelectedHour] = useState(8);
+  const [status, setStatus] = useState<Status>("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [bookedSlot, setBookedSlot] = useState<{ visitDate: string; hour: number } | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/visitings?propertyId=${propertyId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.booked) {
+          setBookedSlot({ visitDate: data.visitDate, hour: data.hour });
+          setStatus("success");
+        }
+      })
+      .catch(() => {});
+  }, [propertyId]);
+
+  const selectedDate = workdays[selectedDateIdx];
+  const { month, day, weekday } = formatDate(selectedDate);
+
+  async function handleRequestShowing() {
+    setStatus("loading");
+    setErrorMsg("");
+
+    try {
+      const res = await fetch("/api/visitings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId,
+          visitDate: selectedDate.toISOString(),
+          hour: selectedHour,
+        }),
+      });
+
+      if (res.status === 401) {
+        setStatus("unauthenticated");
+        return;
+      }
+      if (res.status === 409) {
+        setStatus("conflict");
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data.error ?? "Something went wrong. Please try again.");
+        setStatus("error");
+        return;
+      }
+
+      setStatus("success");
+    } catch {
+      setErrorMsg("Network error. Please try again.");
+      setStatus("error");
+    }
+  }
 
   const dateItems = workdays.map((date, i) => {
     const { month, day, weekday } = formatDate(date);
@@ -141,7 +192,7 @@ export default function TourBookingCard() {
     return (
       <button
         key={i}
-        onClick={() => setSelectedDateIdx(i)}
+        onClick={() => { setSelectedDateIdx(i); setStatus("idle"); }}
         className={[
           "flex flex-col items-center justify-center w-full py-2.5 px-1 rounded-xl border-2 transition-all duration-150 shrink-0",
           isSelected
@@ -161,7 +212,7 @@ export default function TourBookingCard() {
     return (
       <button
         key={h}
-        onClick={() => setSelectedHour(h)}
+        onClick={() => { setSelectedHour(h); setStatus("idle"); }}
         className={[
           "flex flex-col items-center justify-center w-full py-2.5 px-1 rounded-xl border-2 transition-all duration-150 shrink-0",
           isSelected
@@ -175,8 +226,29 @@ export default function TourBookingCard() {
     );
   });
 
-  const selectedDate = workdays[selectedDateIdx];
-  const { month, day, weekday } = formatDate(selectedDate);
+  if (status === "success") {
+    const displayDate = bookedSlot ? new Date(bookedSlot.visitDate) : selectedDate;
+    const displayHour = bookedSlot ? bookedSlot.hour : selectedHour;
+    const { month: dm, day: dd, weekday: dw } = formatDate(displayDate);
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6 flex flex-col items-center text-center gap-4">
+        <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+          <svg className="w-7 h-7 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-gray-900">Showing Requested!</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            {dw} {dm} {dd} at {formatHour(displayHour)}
+          </p>
+          <p className="text-xs text-gray-400 mt-2">
+            You&apos;ll be contacted shortly to confirm your visit.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6 space-y-5">
@@ -194,9 +266,62 @@ export default function TourBookingCard() {
         <HorizontalSlider items={hourItems} visibleCount={VISIBLE_COUNT} />
       </div>
 
+      {/* Feedback messages */}
+      {status === "unauthenticated" && (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-center gap-3">
+          <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <span className="text-sm text-amber-700">
+            Please{" "}
+            <button
+              onClick={() => router.push("/auth")}
+              className="font-semibold underline underline-offset-2 hover:text-amber-900"
+            >
+              sign in
+            </button>{" "}
+            to request a showing.
+          </span>
+        </div>
+      )}
+
+      {status === "conflict" && (
+        <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 flex items-center gap-3">
+          <svg className="w-4 h-4 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+          </svg>
+          <span className="text-sm text-blue-700">
+            You already have a showing booked at this date and time. Pick a different slot.
+          </span>
+        </div>
+      )}
+
+      {status === "error" && (
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 flex items-center gap-3">
+          <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+          <span className="text-sm text-red-700">{errorMsg}</span>
+        </div>
+      )}
+
       {/* CTA */}
-      <button className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold text-sm tracking-wide transition-colors shadow-sm">
-        Request Showing
+      <button
+        onClick={handleRequestShowing}
+        disabled={status === "loading"}
+        className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm tracking-wide transition-colors shadow-sm flex items-center justify-center gap-2"
+      >
+        {status === "loading" ? (
+          <>
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            Requesting…
+          </>
+        ) : (
+          "Request Showing"
+        )}
       </button>
 
       <p className="text-center text-xs text-gray-400">

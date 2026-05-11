@@ -186,7 +186,7 @@ export default async function PropertyPage({
         {/* ── RIGHT: Sticky sidebar ── */}
         <div className="lg:w-[360px] lg:shrink-0">
           <div className="lg:sticky lg:top-24">
-            <TourBookingCard />
+            <TourBookingCard propertyId={property.id} />
 
             {/* Agent card */}
             <div className="mt-4 bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex items-center gap-4">
