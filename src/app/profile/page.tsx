@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProfilePage from "@/components/ProfilePage";
+import AdminPanel from "@/components/AdminPanel";
 import { type VisitingRow } from "@/components/VisitingPropertyCard";
 
 type UserProfile = {
@@ -99,6 +100,8 @@ export default function ProfileRoute() {
   };
 
   if (!profile) return null;
+
+  if (profile.role === "admin") return <AdminPanel />;
 
   return (
     <>

@@ -289,10 +289,11 @@ export default function Navbar() {
                     isProfileActive ? "text-white" : "text-white/70 hover:text-white",
                   ].join(" ")}
                 >
-                  {user.role === "admin" && (
-                    <span className="mr-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
+                  {user.role === "admin" ? (
+                    <span className="text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
+                  ) : (
+                    user.username
                   )}
-                  {user.username}
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -395,10 +396,11 @@ export default function Navbar() {
                       isProfileActive ? "text-white" : "text-white/80 hover:text-white",
                     ].join(" ")}
                   >
-                    {user.role === "admin" && (
-                      <span className="mr-1.5 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
+                    {user.role === "admin" ? (
+                      <span className="text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
+                    ) : (
+                      user.username
                     )}
-                    {user.username}
                   </Link>
                   <button
                     onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
