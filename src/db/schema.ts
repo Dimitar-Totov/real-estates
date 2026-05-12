@@ -125,3 +125,21 @@ export const propertyVisitings = pgTable("property_visitings", {
 
 export type PropertyVisiting = typeof propertyVisitings.$inferSelect;
 export type NewPropertyVisiting = typeof propertyVisitings.$inferInsert;
+
+export const agents = pgTable("agents", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  specialty: text("specialty").notNull(),
+  city: text("city").notNull(),
+  image: text("image").notNull(),
+  rating: numeric("rating", { precision: 3, scale: 1 }).notNull(),
+  reviews: integer("reviews").notNull().default(0),
+  experience: integer("experience").notNull().default(0),
+  phone: text("phone").notNull(),
+  email: text("email").notNull().unique(),
+  featured: boolean("featured").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Agent = typeof agents.$inferSelect;
+export type NewAgent = typeof agents.$inferInsert;
