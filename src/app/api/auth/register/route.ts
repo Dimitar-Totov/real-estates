@@ -11,9 +11,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "All fields are required." }, { status: 400 });
   }
 
-  const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
-  if (existing.length > 0) {
+  const existingEmail = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  if (existingEmail.length > 0) {
     return NextResponse.json({ error: "Email already in use." }, { status: 409 });
+  }
+
+  const existingUsername = await db.select({ id: users.id }).from(users).where(eq(users.username, username)).limit(1);
+  if (existingUsername.length > 0) {
+    return NextResponse.json({ error: "Username already taken." }, { status: 409 });
   }
 
   const hashed = await bcrypt.hash(password, 12);

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Download, Search, Settings } from "lucide-react";
+import UserManagement from "@/components/UserManagement";
 import type { ApexOptions } from "apexcharts";
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -174,10 +175,6 @@ function StatCard({ label, value, bg }: { label: string; value: number; bg: stri
 }
 
 // ── UserManagement ────────────────────────────────────────────────────────────
-
-function UserManagement() {
-  return <div className="min-h-[60vh]" />;
-}
 
 // ── AdminPanel ────────────────────────────────────────────────────────────────
 
