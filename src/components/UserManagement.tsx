@@ -1,19 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import SearchInput from "@/components/SearchInput";
 import UserProfileCard, { type UserResult } from "@/components/UserProfileCard";
+import MakeAgentModal from "@/components/MakeAgentModal";
+import SendMessageModal, { type MessageSender } from "@/components/SendMessageModal";
 
 const NAVY = "#1e3a5f";
 
 export default function UserManagement() {
-  const [query,    setQuery]    = useState("");
-  const [results,  setResults]  = useState<UserResult[]>([]);
-  const [index,    setIndex]    = useState(0);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
-  const [searched, setSearched] = useState(false);
+  const [query,         setQuery]         = useState("");
+  const [results,       setResults]       = useState<UserResult[]>([]);
+  const [index,         setIndex]         = useState(0);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState<string | null>(null);
+  const [searched,      setSearched]      = useState(false);
+  const [modalUser,     setModalUser]     = useState<UserResult | null>(null);
+  const [messageTarget, setMessageTarget] = useState<UserResult | null>(null);
+  const [sender,        setSender]        = useState<MessageSender | null>(null);
+
+  useEffect(() => {
+    fetch("/api/user/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.id) setSender({ id: data.id, name: data.username, email: data.email });
+      })
+      .catch(() => {});
+  }, []);
 
   const runSearch = async () => {
     const q = query.trim();
@@ -40,6 +54,7 @@ export default function UserManagement() {
   const multiple = results.length > 1;
 
   return (
+    <>
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
 
       {/* ── Search row ────────────────────────────────────────────────────── */}
@@ -83,7 +98,12 @@ export default function UserManagement() {
       {/* ── Results ───────────────────────────────────────────────────────── */}
       {results.length > 0 && (
         <div className="mt-8 flex flex-col items-center gap-6">
-          <UserProfileCard key={index} user={results[index]} />
+          <UserProfileCard
+            key={index}
+            user={results[index]}
+            onMakeAgent={() => setModalUser(results[index])}
+            onMessage={() => setMessageTarget(results[index])}
+          />
 
           {multiple && (
             <div className="flex items-center gap-4">
@@ -115,5 +135,28 @@ export default function UserManagement() {
         </div>
       )}
     </div>
+
+    {modalUser && (
+      <MakeAgentModal
+        user={modalUser}
+        onClose={() => setModalUser(null)}
+        onSuccess={() => {
+          setModalUser(null);
+          setQuery("");
+          setResults([]);
+          setSearched(false);
+          setIndex(0);
+        }}
+      />
+    )}
+
+    {messageTarget && sender && (
+      <SendMessageModal
+        sender={sender}
+        receiver={{ id: messageTarget.id, name: messageTarget.username }}
+        onClose={() => setMessageTarget(null)}
+      />
+    )}
+    </>
   );
 }

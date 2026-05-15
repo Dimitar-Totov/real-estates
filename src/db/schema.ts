@@ -9,7 +9,7 @@ import {
   pgEnum,
 } from "drizzle-orm/pg-core";
 
-export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
+export const userRoleEnum = pgEnum("user_role", ["user", "admin", "agent"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -128,6 +128,7 @@ export type NewPropertyVisiting = typeof propertyVisitings.$inferInsert;
 
 export const agents = pgTable("agents", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   specialty: text("specialty").notNull(),
   city: text("city").notNull(),
@@ -143,3 +144,15 @@ export const agents = pgTable("agents", {
 
 export type Agent = typeof agents.$inferSelect;
 export type NewAgent = typeof agents.$inferInsert;
+
+export const messages = pgTable("messages", {
+  id:         serial("id").primaryKey(),
+  senderId:   integer("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  receiverId: integer("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subject:    text("subject").notNull(),
+  message:    text("message").notNull(),
+  sentAt:     timestamp("sent_at").defaultNow().notNull(),
+});
+
+export type Message = typeof messages.$inferSelect;
+export type NewMessage = typeof messages.$inferInsert;
