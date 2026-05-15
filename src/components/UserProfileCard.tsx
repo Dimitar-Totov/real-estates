@@ -18,7 +18,16 @@ export interface UserResult {
 const TEAL = "#0d9488";
 const NAVY = "#1e3a5f";
 
-export default function UserProfileCard({ user }: { user: UserResult }) {
+export default function UserProfileCard({
+  user,
+  onMakeAgent,
+  onMessage,
+}: {
+  user: UserResult;
+  onMakeAgent?: () => void;
+  onMessage?: () => void;
+}) {
+  const hasContact = !!(user.officePhone || user.mobilePhone || user.contactEmail);
   const joinedDate = new Date(user.createdAt).toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
@@ -55,7 +64,7 @@ export default function UserProfileCard({ user }: { user: UserResult }) {
               <UserCheck className="w-3.5 h-3.5 text-teal-300 shrink-0" />
               Joined {joinedDate}
             </div>
-            <button className="upc-msg flex items-center gap-1.5 text-sm font-semibold text-teal-700 bg-white/85 backdrop-blur-sm px-3.5 py-1.5 rounded-full">
+            <button onClick={onMessage} className="upc-msg flex items-center gap-1.5 text-sm font-semibold text-teal-700 bg-white/85 backdrop-blur-sm px-3.5 py-1.5 rounded-full">
               <MessageCircle className="w-4 h-4" />
               Message
             </button>
@@ -153,12 +162,20 @@ export default function UserProfileCard({ user }: { user: UserResult }) {
           <div className="border-t border-gray-100 mt-5 mb-5" />
 
           {/* Make Agent */}
-          <button
-            className="upc-make w-full py-3.5 rounded-full font-semibold text-white text-sm"
-            style={{ background: `linear-gradient(135deg, ${TEAL} 0%, ${NAVY} 100%)` }}
-          >
-            Make Agent
-          </button>
+          {hasContact ? (
+            <button
+              onClick={onMakeAgent}
+              className="upc-make w-full py-3.5 rounded-full font-semibold text-white text-sm"
+              style={{ background: `linear-gradient(135deg, ${TEAL} 0%, ${NAVY} 100%)` }}
+            >
+              Make Agent
+            </button>
+          ) : (
+            <div className="w-full py-3.5 rounded-full text-center text-sm font-semibold text-gray-400 bg-gray-100 cursor-not-allowed select-none"
+              title="User has no contact information — add a phone or email first">
+              No Contact Info
+            </div>
+          )}
         </div>
       </div>
     </>
