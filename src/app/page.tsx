@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import HeroSearch from "@/components/HeroSearch";
 import PropertyCard from "@/components/PropertyCard";
 import { searchProperties } from "@/services/propertyService";
+import { getPropertyCoverImage } from "@/services/imagesService";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,9 @@ export default async function HomePage({
   const { q, status } = await searchParams;
   const query   = q?.trim() ?? "";
   const results = query ? await searchProperties(query, status) : [];
+  const coverImages = results.length > 0
+    ? await Promise.all(results.map((p) => getPropertyCoverImage(p.id)))
+    : [];
   const hasSearch = query.length > 0;
 
   return (
@@ -121,8 +125,8 @@ export default async function HomePage({
           ) : (
             /* ── Results grid ── */
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {results.map((property) => (
-                <PropertyCard key={property.id} property={property} />
+              {results.map((property, i) => (
+                <PropertyCard key={property.id} property={property} coverImage={coverImages[i]} />
               ))}
             </div>
           )}
