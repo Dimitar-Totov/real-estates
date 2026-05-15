@@ -8,7 +8,8 @@ import { cdnUrl } from "@/services/userImagesService";
 type UserRow = {
   id: number;
   username: string;
-  role: "user" | "admin";
+  email: string;
+  role: "user" | "admin" | "agent";
   avatarKey: string | null;
   coverKey: string | null;
   location: string | null;
@@ -27,6 +28,7 @@ function buildResponse(user: UserRow, profile: ProfileRow) {
   return {
     id: user.id,
     username: user.username,
+    email: user.email,
     role: user.role,
     avatarUrl: user.avatarKey ? cdnUrl(user.avatarKey) : null,
     coverUrl: user.coverKey ? cdnUrl(user.coverKey) : null,
@@ -45,6 +47,7 @@ async function fetchUserWithProfile(userId: number) {
     .select({
       id: users.id,
       username: users.username,
+      email: users.email,
       role: users.role,
       avatarKey: users.avatarKey,
       coverKey: users.coverKey,

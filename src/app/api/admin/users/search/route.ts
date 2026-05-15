@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/jwt";
 import { db } from "@/db";
 import { users, profiles } from "@/db/schema";
-import { eq, ilike } from "drizzle-orm";
+import { and, eq, ilike, ne } from "drizzle-orm";
 import { cdnUrl } from "@/services/userImagesService";
 
 export async function GET(req: NextRequest) {
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     })
     .from(users)
     .leftJoin(profiles, eq(profiles.userId, users.id))
-    .where(ilike(users.username, `%${q}%`))
+    .where(and(ilike(users.username, `%${q}%`), ne(users.role, "agent")))
     .limit(20);
 
   return NextResponse.json(
