@@ -1,8 +1,13 @@
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { getPropertyById } from "@/services/propertyService";
 import { listPropertyImages } from "@/services/imagesService";
 import TourBookingCard from "@/components/TourBookingCard";
 import PropertyGallery from "@/components/PropertyGallery";
+import PropertyAgentCard from "@/components/PropertyAgentCard";
+import { db } from "@/db";
+import { agents } from "@/db/schema";
+import { verifyToken } from "@/lib/jwt";
 
 export const dynamic = "force-dynamic";
 
@@ -35,9 +40,19 @@ export default async function PropertyPage({
   const property = await getPropertyById(Number(id));
   if (!property) notFound();
 
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  let isAdmin = false;
+  if (token) {
+    try { isAdmin = verifyToken(token).role === "admin"; } catch { /* invalid token */ }
+  }
+
   const status = STATUS_CONFIG[property.status];
   const images = await listPropertyImages(property.id, property.images);
   const seed = property.id;
+
+  const allAgents = await db.select({ id: agents.id, userId: agents.userId, name: agents.name }).from(agents);
+  const agent = allAgents.length > 0 ? allAgents[property.id % allAgents.length] : null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -186,30 +201,14 @@ export default async function PropertyPage({
         {/* ── RIGHT: Sticky sidebar ── */}
         <div className="lg:w-[360px] lg:shrink-0">
           <div className="lg:sticky lg:top-24">
-            <TourBookingCard propertyId={property.id} />
+            {!isAdmin && <TourBookingCard propertyId={property.id} />}
 
-            {/* Agent card */}
-            <div className="mt-4 bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex items-center gap-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`https://picsum.photos/seed/agent-${seed}/80/80`}
-                alt="Agent"
-                className="w-14 h-14 rounded-full object-cover border-2 border-gray-100 shrink-0"
-              />
-              <div className="min-w-0">
-                <p className="font-semibold text-gray-900 text-sm">Listed by</p>
-                <p className="text-gray-700 font-medium truncate">Sarah Mitchell</p>
-                <p className="text-xs text-gray-400">RealEstate · Top Agent</p>
-              </div>
-              <a
-                href="tel:+15551234567"
-                className="ml-auto shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
-                </svg>
-              </a>
-            </div>
+            <PropertyAgentCard
+              seed={seed}
+              agentName={agent?.name ?? "Top Agent"}
+              agentUserId={agent?.userId ?? null}
+              propertyTitle={property.title}
+            />
           </div>
         </div>
       </div>

@@ -7,13 +7,14 @@ export interface MessageSender   { id: number; name: string; email: string }
 export interface MessageReceiver { id: number; name: string }
 
 interface Props {
-  sender:   MessageSender;
-  receiver: MessageReceiver;
-  onClose:  () => void;
+  sender:         MessageSender;
+  receiver:       MessageReceiver;
+  onClose:        () => void;
+  initialSubject?: string;
 }
 
-export default function SendMessageModal({ sender, receiver, onClose }: Props) {
-  const [subject, setSubject] = useState("");
+export default function SendMessageModal({ sender, receiver, onClose, initialSubject = "" }: Props) {
+  const [subject, setSubject] = useState(initialSubject);
   const [body,    setBody]    = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
