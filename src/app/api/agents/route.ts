@@ -1,10 +1,8 @@
+import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { agents } from "@/db/schema";
-import AgentsSearchView from "@/components/AgentsSearchView";
 
-export const dynamic = "force-dynamic";
-
-export default async function AgentsSearchPage() {
+export async function GET() {
   const rows = await db
     .select({
       id:         agents.id,
@@ -22,12 +20,5 @@ export default async function AgentsSearchPage() {
     .from(agents)
     .orderBy(agents.createdAt);
 
-  const agentList = rows.map((a) => ({
-    ...a,
-    id:     String(a.id),
-    userId: a.userId ?? null,
-    rating: Number(a.rating),
-  }));
-
-  return <AgentsSearchView agents={agentList} />;
+  return NextResponse.json(rows);
 }

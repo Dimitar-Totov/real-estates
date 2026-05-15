@@ -46,7 +46,7 @@ export default async function HomePage({
   const query   = q?.trim() ?? "";
   const results = query ? await searchProperties(query, status) : [];
   const coverImages = results.length > 0
-    ? await Promise.all(results.map((p) => getPropertyCoverImage(p.id)))
+    ? await Promise.all(results.map((p) => getPropertyCoverImage(p.id, p.images)))
     : [];
   const hasSearch = query.length > 0;
 

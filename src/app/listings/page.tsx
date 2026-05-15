@@ -15,6 +15,7 @@ interface SearchParams {
   maxPrice?: string;
   minBeds?: string;
   minBaths?: string;
+  sort?: string;
 }
 
 export default async function ListingsPage({
@@ -24,14 +25,25 @@ export default async function ListingsPage({
 }) {
   const params = await searchParams;
   const filtered = await getAllProperties(params);
-  const coverImages = await Promise.all(filtered.map((p) => getPropertyCoverImage(p.id)));
+
+  const headingMap: Record<string, string> = {
+    newest: "New Listings",
+    luxury: "Luxury Homes",
+    affordable: "Affordable Homes",
+    development: "New Developments",
+  };
+  const activeHeading =
+    (params.sort && headingMap[params.sort]) ||
+    (params.type && headingMap[params.type]) ||
+    "Property Listings";
+  const coverImages = await Promise.all(filtered.map((p) => getPropertyCoverImage(p.id, p.images)));
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
       {/* ── Page header ── */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Property Listings</h1>
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{activeHeading}</h1>
         <p className="text-gray-400 mt-1.5 text-sm">
           Browse thousands of homes for sale and rent
         </p>

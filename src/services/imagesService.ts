@@ -32,7 +32,10 @@ export async function uploadPropertyImage(
   return `${PUBLIC_URL}/${key}`;
 }
 
-export async function listPropertyImages(propertyId: number): Promise<string[]> {
+export async function listPropertyImages(
+  propertyId: number,
+  fallbackImages?: string[] | null,
+): Promise<string[]> {
   const prefix = `${propertyId}/`;
 
   const response = await r2.send(
@@ -43,10 +46,15 @@ export async function listPropertyImages(propertyId: number): Promise<string[]> 
     })
   );
 
-  return (response.Contents ?? []).map((obj) => `${PUBLIC_URL}/${obj.Key!}`);
+  const r2Images = (response.Contents ?? []).map((obj) => `${PUBLIC_URL}/${obj.Key!}`);
+  if (r2Images.length > 0) return r2Images;
+  return fallbackImages ?? [];
 }
 
-export async function getPropertyCoverImage(propertyId: number): Promise<string | null> {
+export async function getPropertyCoverImage(
+  propertyId: number,
+  fallbackImages?: string[] | null,
+): Promise<string | null> {
   const prefix = `${propertyId}/`;
 
   const response = await r2.send(
@@ -61,7 +69,8 @@ export async function getPropertyCoverImage(propertyId: number): Promise<string 
   );
 
   const first = response.Contents?.[0];
-  return first?.Key ? `${PUBLIC_URL}/${first.Key}` : null;
+  if (first?.Key) return `${PUBLIC_URL}/${first.Key}`;
+  return fallbackImages?.[0] ?? null;
 }
 
 export async function countPropertyImages(propertyId: number): Promise<number> {

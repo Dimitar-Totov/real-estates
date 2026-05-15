@@ -82,7 +82,6 @@ const NAV_LINKS: NavLinkDef[] = [
     dropdown: true,
     featured: { label: "Find an Agent", href: "/agents/search", icon: icons.search, description: "Search by name, specialty or city" },
     items: [
-      { label: "All Agents",      href: "/agents",               icon: icons.agents,  description: "Browse every agent" },
       { label: "Top-Rated",       href: "/agents?sort=rating",   icon: icons.star,    description: "Highest reviewed" },
       { label: "New Agents",      href: "/agents?sort=newest",   icon: icons.newUser, description: "Recently joined" },
       { label: "Featured Agents", href: "/agents?featured=true", icon: icons.badge,   description: "Editor's picks" },
@@ -200,10 +199,10 @@ export default function Navbar() {
               link.label === "Real Estate Agents" && user?.role === "admin" ? (
                 <Link
                   key={link.label}
-                  href="/agents"
+                  href="/agents/search"
                   className={[
                     "flex items-center text-white/90 hover:text-white text-sm px-3 py-2 rounded-lg hover:bg-white/10 transition-colors whitespace-nowrap",
-                    pathname === "/agents" ? "!text-white bg-white/10" : "",
+                    pathname === "/agents/search" ? "!text-white bg-white/10" : "",
                   ].join(" ")}
                 >
                   {link.label}
@@ -383,11 +382,11 @@ export default function Navbar() {
                 link.label === "Real Estate Agents" && user?.role === "admin" ? (
                   <Link
                     key={link.label}
-                    href="/agents"
+                    href="/agents/search"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={[
                       "flex items-center text-white text-sm px-3 py-3 rounded-lg hover:bg-white/10 transition-colors",
-                      pathname === "/agents" ? "bg-white/10" : "",
+                      pathname === "/agents/search" ? "bg-white/10" : "",
                     ].join(" ")}
                   >
                     {link.label}

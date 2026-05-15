@@ -38,6 +38,13 @@ export const propertyTypeEnum = pgEnum("property_type", [
   "commercial",
 ]);
 
+export const propertyCategoryEnum = pgEnum("property_category", [
+  "standard",
+  "luxury",
+  "affordable",
+  "development",
+]);
+
 export const propertyStatusEnum = pgEnum("property_status", [
   "for_sale",
   "for_rent",
@@ -64,6 +71,7 @@ export const properties = pgTable("properties", {
   yearBuilt: integer("year_built"),
   garage: boolean("garage").default(false),
   pool: boolean("pool").default(false),
+  category: propertyCategoryEnum("category").notNull().default("standard"),
   images: text("images").array(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

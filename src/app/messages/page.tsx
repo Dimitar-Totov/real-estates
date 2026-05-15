@@ -9,8 +9,6 @@ import {
   X,
   ChevronLeft,
   Clock,
-  User,
-  Mail,
 } from "lucide-react";
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -59,68 +57,6 @@ function Avatar({ name, size = "md" }: { name: string | null; size?: "sm" | "md"
   return (
     <div className={`${sizes[size]} rounded-full bg-slate-200 flex items-center justify-center shrink-0`}>
       <span className="font-semibold text-slate-500 uppercase">{(name ?? "?")[0]}</span>
-    </div>
-  );
-}
-
-/* ── Sent message modal ────────────────────────────────────────── */
-function SentModal({ msg, onClose }: { msg: SentMessage; onClose: () => void }) {
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-3 text-slate-600">
-            <Send className="w-5 h-5" />
-            <span className="text-base font-semibold">Sent Message</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Fields */}
-        <div className="px-6 py-6 space-y-5">
-          <div className="space-y-2">
-            <label className="text-xs uppercase tracking-widest text-slate-400 font-semibold">To</label>
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200">
-              <User className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="text-base text-slate-700">{msg.receiverName ?? `User #${msg.receiverId}`}</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs uppercase tracking-widest text-slate-400 font-semibold">Subject</label>
-            <div className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-200">
-              <span className="text-base font-semibold text-slate-800">{msg.subject}</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs uppercase tracking-widest text-slate-400 font-semibold">Message</label>
-            <div className="px-4 py-4 rounded-xl bg-slate-50 border border-slate-200 min-h-[130px] max-h-64 overflow-y-auto">
-              <p className="text-base text-slate-700 leading-relaxed whitespace-pre-wrap">{msg.message}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-sm text-slate-400">
-            <Clock className="w-4 h-4" />
-            <span>{formatFullDate(msg.sentAt)}</span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -431,7 +367,7 @@ export default function MessagesPage() {
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4">
           <div className="flex items-center gap-3">
             <Avatar name={selectedReceived.senderName} size="sm" />
-            <span className="text-base font-medium text-slate-700">{selectedReceived.senderName ?? "Unknown"}</span>
+            <span className="text-base font-medium text-slate-700">From: {selectedReceived.senderName ?? "Unknown"}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-400">
             <Clock className="w-4 h-4" />
@@ -446,6 +382,14 @@ export default function MessagesPage() {
       </div>
     </div>
   );
+
+  const handleSelectSent = (msg: SentMessage) => {
+    if (selectedSent?.id === msg.id) {
+      setSelectedSent(null);
+      return;
+    }
+    setSelectedSent(msg);
+  };
 
   /* ── Sent list ── */
   const sentList = (
@@ -465,32 +409,73 @@ export default function MessagesPage() {
           </div>
         </div>
       ) : (
-        <ul className="flex-1 overflow-y-auto divide-y divide-slate-100">
-          {sent.map((msg) => (
-            <li key={msg.id}>
-              <button
-                onClick={() => setSelectedSent(msg)}
-                className="w-full text-left px-6 py-5 hover:bg-slate-50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                    <Mail className="w-5 h-5 text-slate-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-base font-semibold text-slate-800 truncate">{msg.subject}</span>
-                      <span className="text-sm text-slate-400 shrink-0">{formatDate(msg.sentAt)}</span>
+        <ul
+          className="flex-1 overflow-y-auto divide-y divide-slate-100"
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedSent(null); }}
+        >
+          {sent.map((msg) => {
+            const isSelected = selectedSent?.id === msg.id;
+            return (
+              <li key={msg.id}>
+                <button
+                  onClick={() => handleSelectSent(msg)}
+                  className={[
+                    "w-full text-left px-6 py-5 transition-colors",
+                    isSelected ? "bg-slate-100" : "hover:bg-slate-50",
+                  ].join(" ")}
+                >
+                  <div className="flex items-center gap-4">
+                    <Avatar name={msg.receiverName} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-base font-semibold text-slate-700 truncate">
+                          {msg.receiverName ?? `User #${msg.receiverId}`}
+                        </span>
+                        <span className="text-sm text-slate-400 shrink-0">{formatDate(msg.sentAt)}</span>
+                      </div>
+                      <p className="mt-1 text-sm font-medium text-slate-500 truncate">{msg.subject}</p>
                     </div>
-                    <p className="mt-0.5 text-sm text-slate-400 truncate">
-                      To: {msg.receiverName ?? `User #${msg.receiverId}`}
-                    </p>
                   </div>
-                </div>
-              </button>
-            </li>
-          ))}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
+    </div>
+  );
+
+  /* ── Sent reading pane ── */
+  const sentPane = selectedSent && (
+    <div className="flex flex-col h-full border-l border-slate-200">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
+        <button
+          onClick={() => setSelectedSent(null)}
+          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors md:hidden"
+        >
+          <ChevronLeft className="w-4 h-4" /> Back
+        </button>
+      </div>
+
+      <div className="px-8 pt-8 pb-6 border-b border-slate-100 bg-white">
+        <h2 className="text-2xl font-bold text-slate-900 leading-snug">{selectedSent.subject}</h2>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4">
+          <div className="flex items-center gap-3">
+            <Avatar name={selectedSent.receiverName} size="sm" />
+            <span className="text-base font-medium text-slate-700">
+              To: {selectedSent.receiverName ?? `User #${selectedSent.receiverId}`}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-slate-400">
+            <Clock className="w-4 h-4" />
+            <span>{formatFullDate(selectedSent.sentAt)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-8 py-7 bg-white">
+        <p className="text-base text-slate-700 leading-8 whitespace-pre-wrap">{selectedSent.message}</p>
+      </div>
     </div>
   );
 
@@ -518,16 +503,26 @@ export default function MessagesPage() {
               )}
             </div>
           ) : (
-            <div className="flex flex-col h-full">
-              {loading ? <LoadingState /> : sentList}
+            <div className="flex h-full">
+              <div className={[
+                "h-full overflow-hidden",
+                selectedSent
+                  ? "hidden md:flex md:flex-col md:w-88 lg:w-[26rem] border-r border-slate-200"
+                  : "flex flex-col w-full",
+              ].join(" ")}>
+                {loading ? <LoadingState /> : sentList}
+              </div>
+              {selectedSent && (
+                <div className="flex-1 h-full overflow-hidden">
+                  {sentPane}
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {selectedSent && (
-        <SentModal msg={selectedSent} onClose={() => setSelectedSent(null)} />
-      )}
+
       {replyTarget && (
         <ReplyModal
           original={replyTarget}

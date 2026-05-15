@@ -36,7 +36,7 @@ export default async function PropertyPage({
   if (!property) notFound();
 
   const status = STATUS_CONFIG[property.status];
-  const images = await listPropertyImages(property.id);
+  const images = await listPropertyImages(property.id, property.images);
   const seed = property.id;
 
   return (
