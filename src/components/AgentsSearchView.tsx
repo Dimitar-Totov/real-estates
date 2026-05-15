@@ -19,7 +19,8 @@ export interface AgentRow {
   email: string;
 }
 
-export default function AgentsSearchView({ agents }: { agents: AgentRow[] }) {
+export default function AgentsSearchView({ agents: initial }: { agents: AgentRow[] }) {
+  const [agents, setAgents] = useState(initial);
   const [filters, setFilters] = useState({
     specialties: [] as string[],
     cities: [] as string[],
@@ -28,18 +29,27 @@ export default function AgentsSearchView({ agents }: { agents: AgentRow[] }) {
 
   const [messageTarget, setMessageTarget] = useState<AgentRow | null>(null);
   const [sender, setSender] = useState<MessageSender | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     fetch("/api/user/me")
       .then((r) => r.json())
       .then((data) => {
-        if (data.id) setSender({ id: data.id, name: data.username, email: data.email });
+        if (data.id) {
+          setSender({ id: data.id, name: data.username, email: data.email });
+          setIsAdmin(data.role === "admin");
+        }
       })
       .catch(() => {});
   }, []);
 
+  const handleDelete = async (id: string) => {
+    await fetch(`/api/admin/agents/${id}`, { method: "DELETE" });
+    setAgents((prev) => prev.filter((a) => a.id !== id));
+  };
+
   const filteredAgents = useMemo(() => {
-    return agents.filter((agent) => {
+    return agents.filter((agent: AgentRow) => {
       if (
         filters.searchName &&
         !agent.name.toLowerCase().includes(filters.searchName.toLowerCase())
@@ -144,6 +154,8 @@ export default function AgentsSearchView({ agents }: { agents: AgentRow[] }) {
                   <AgentCard
                     key={agent.id}
                     agent={agent}
+                    isAdmin={isAdmin}
+                    onDelete={handleDelete}
                     onEmail={() => setMessageTarget(agent)}
                   />
                 ))}

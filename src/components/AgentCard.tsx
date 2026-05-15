@@ -43,7 +43,7 @@ export default function AgentCard({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer group">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-default group">
       {/* Agent Image */}
       <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center overflow-hidden">
         {agent.image ? (
@@ -138,32 +138,29 @@ export default function AgentCard({
             </div>
           </div>
 
-          {/* Phone info + Email button */}
-          <div className="flex gap-2 pt-2">
-            {/* Phone — info display, not a button */}
-            <div className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg py-2 px-3 flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300 min-w-0">
-              <svg
-                className="w-4 h-4 shrink-0 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                />
-              </svg>
-              <span className="truncate">
-                {agent.phone || "No phone"}
-              </span>
-            </div>
+          {/* Phone */}
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 cursor-default">
+            <svg
+              className="w-4 h-4 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+              />
+            </svg>
+            {agent.phone || "No phone"}
+          </div>
 
-            {/* Email — opens message modal */}
+          {/* Email button */}
+          <div className="flex gap-2 pt-2">
             <button
               onClick={(e) => { e.stopPropagation(); onEmail?.(); }}
-              className="flex-1 border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1"
+              className="w-full border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1"
             >
               <svg
                 className="w-4 h-4"
