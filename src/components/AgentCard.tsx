@@ -39,18 +39,20 @@ export default function AgentCard({ agent, isAdmin = false, onDelete }: {
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer group">
       {/* Agent Image */}
       <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center overflow-hidden">
-        <img
-          src={agent.image}
-          alt={agent.name}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            const fallback = target.parentElement?.querySelector('.fallback');
-            if (fallback) (fallback as HTMLElement).style.display = 'flex';
-          }}
-        />
-        <div className="fallback absolute inset-0 flex items-center justify-center text-gray-400 text-sm hidden">
+        {agent.image ? (
+          <img
+            src={agent.image}
+            alt={agent.name}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const fallback = target.parentElement?.querySelector('.fallback');
+              if (fallback) (fallback as HTMLElement).style.display = 'flex';
+            }}
+          />
+        ) : null}
+        <div className={`fallback absolute inset-0 flex items-center justify-center text-gray-400 text-sm${agent.image ? ' hidden' : ''}`}>
           <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
           </svg>
