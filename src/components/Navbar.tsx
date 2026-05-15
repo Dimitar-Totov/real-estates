@@ -73,8 +73,7 @@ const NAV_LINKS: NavLinkDef[] = [
     label: "Sell",
     dropdown: true,
     items: [
-      { label: "List Your Property",       href: "/properties/new",    icon: icons.list,     description: "Get your home in front of buyers" },
-      { label: "Schedule a Consultation",  href: "/sell/consultation", icon: icons.calendar, description: "Talk to an expert, no strings" },
+      { label: "List Your Property", href: "/properties/new", icon: icons.list, description: "Get your home in front of buyers" },
     ],
   },
   {
@@ -195,7 +194,7 @@ export default function Navbar() {
 
           {/* ── Desktop nav ── */}
           <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
-            {NAV_LINKS.map((link) =>
+            {NAV_LINKS.filter((link) => !(link.label === "Sell" && user?.role === "admin")).map((link) =>
               link.label === "Real Estate Agents" && user?.role === "admin" ? (
                 <Link
                   key={link.label}
@@ -378,7 +377,7 @@ export default function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-white/10 bg-black/30 backdrop-blur-md">
             <nav className="px-4 py-4 space-y-1">
-              {NAV_LINKS.map((link) =>
+              {NAV_LINKS.filter((link) => !(link.label === "Sell" && user?.role === "admin")).map((link) =>
                 link.label === "Real Estate Agents" && user?.role === "admin" ? (
                   <Link
                     key={link.label}
