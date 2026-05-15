@@ -152,6 +152,7 @@ export const messages = pgTable("messages", {
   subject:    text("subject").notNull(),
   message:    text("message").notNull(),
   sentAt:     timestamp("sent_at").defaultNow().notNull(),
+  seenAt:     timestamp("seen_at"),
 });
 
 export type Message = typeof messages.$inferSelect;

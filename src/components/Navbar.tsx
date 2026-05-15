@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { MessageSquare } from "lucide-react";
 
 type UserInfo = { id: number; username: string; role: string };
 
@@ -125,9 +126,32 @@ export default function Navbar() {
   const [openDropdown, setOpenDropdown]         = useState<string | null>(null);
   const [mobileExpanded, setMobileExpanded]     = useState<string | null>(null);
   const [user, setUser]                         = useState<UserInfo | null>(null);
+  const [msgCount, setMsgCount]                 = useState(0);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setUser(parseUserCookie()); }, [pathname]);
+  const refreshMsgCount = useCallback(() => {
+    fetch("/api/messages", { method: "HEAD" })
+      .then((r) => {
+        const count = parseInt(r.headers.get("X-Unseen-Count") ?? "0", 10);
+        setMsgCount(isNaN(count) ? 0 : count);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const u = parseUserCookie();
+    setUser(u);
+    if (u) {
+      refreshMsgCount();
+    } else {
+      setMsgCount(0);
+    }
+  }, [pathname, refreshMsgCount]);
+
+  useEffect(() => {
+    window.addEventListener("messages:seen", refreshMsgCount);
+    return () => window.removeEventListener("messages:seen", refreshMsgCount);
+  }, [refreshMsgCount]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -306,6 +330,21 @@ export default function Navbar() {
                     user.username
                   )}
                 </Link>
+                <Link
+                  href="/messages"
+                  className={[
+                    "relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors",
+                    pathname === "/messages" ? "text-white bg-white/15" : "text-white/60 hover:text-white hover:bg-white/10",
+                  ].join(" ")}
+                  aria-label="Messages"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  {msgCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                      {msgCount > 99 ? "99+" : msgCount}
+                    </span>
+                  )}
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="text-sm px-5 py-2 rounded-lg font-medium transition-colors border border-white/50 text-white/80 hover:bg-white/10 hover:text-white hover:border-white/70"
@@ -411,20 +450,38 @@ export default function Navbar() {
               )}
               {user ? (
                 <div className="mt-2 flex items-center justify-between px-3 py-3 rounded-lg border border-white/20 bg-white/5">
-                  <Link
-                    href="/profile"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={[
-                      "text-sm font-medium transition-colors",
-                      isProfileActive ? "text-white" : "text-white/80 hover:text-white",
-                    ].join(" ")}
-                  >
-                    {user.role === "admin" ? (
-                      <span className="text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
-                    ) : (
-                      user.username
-                    )}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={[
+                        "text-sm font-medium transition-colors",
+                        isProfileActive ? "text-white" : "text-white/80 hover:text-white",
+                      ].join(" ")}
+                    >
+                      {user.role === "admin" ? (
+                        <span className="text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
+                      ) : (
+                        user.username
+                      )}
+                    </Link>
+                    <Link
+                      href="/messages"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={[
+                        "relative flex items-center justify-center w-7 h-7 rounded-lg transition-colors",
+                        pathname === "/messages" ? "text-white bg-white/15" : "text-white/60 hover:text-white hover:bg-white/10",
+                      ].join(" ")}
+                      aria-label="Messages"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      {msgCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold leading-none">
+                          {msgCount > 99 ? "99+" : msgCount}
+                        </span>
+                      )}
+                    </Link>
+                  </div>
                   <button
                     onClick={() => { setIsMobileMenuOpen(false); handleLogout(); }}
                     className="text-sm text-white/70 hover:text-white transition-colors font-medium"
