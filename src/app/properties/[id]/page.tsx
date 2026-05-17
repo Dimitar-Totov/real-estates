@@ -109,14 +109,6 @@ export default async function PropertyPage({
                 {property.city}, {property.state} {property.zipCode}
               </p>
             </div>
-            <div className="shrink-0 hidden sm:block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`https://picsum.photos/seed/map-${seed}/200/120`}
-                alt="Map"
-                className="w-28 h-16 object-cover rounded-xl border border-gray-200 shadow-sm"
-              />
-            </div>
           </div>
 
           {/* 3. Price + stats */}
