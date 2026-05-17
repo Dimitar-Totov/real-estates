@@ -71,6 +71,13 @@
       "when": 1778869926818,
       "tag": "0009_powerful_lady_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779020603545,
+      "tag": "0010_narrow_pestilence",
+      "breakpoints": true
     }
   ]
 }

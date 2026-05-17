@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { eq, ilike, and, SQL, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { properties, NewProperty } from "@/db/schema";
-import { ilike, and, SQL, sql } from "drizzle-orm";
+import { properties, agents, messages, pendingListings, NewProperty } from "@/db/schema";
+import { verifyToken } from "@/lib/jwt";
+
+function tryAuth(req: NextRequest): number | null {
+  try {
+    const token = req.cookies.get("token")?.value;
+    return token ? verifyToken(token).id : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,9 +40,89 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: NewProperty = await request.json();
-    const [created] = await db.insert(properties).values(body).returning();
-    return NextResponse.json(created, { status: 201 });
+    const userId = tryAuth(request);
+    const body = await request.json();
+    const { agentId, ...propertyData } = body;
+
+    // No agent selected — insert directly (admin / direct use)
+    if (!agentId) {
+      const [created] = await db
+        .insert(properties)
+        .values(propertyData as NewProperty)
+        .returning();
+      return NextResponse.json(created, { status: 201 });
+    }
+
+    const [agent] = await db
+      .select({ id: agents.id, userId: agents.userId, name: agents.name })
+      .from(agents)
+      .where(eq(agents.id, Number(agentId)));
+
+    if (!agent) {
+      return NextResponse.json({ error: "Agent not found" }, { status: 400 });
+    }
+
+    // 1. Store property data as pending — nothing goes into properties table yet
+    const [pending] = await db
+      .insert(pendingListings)
+      .values({
+        agentId: agent.id,
+        submittedBy: userId ?? undefined,
+        propertyData: propertyData,
+      })
+      .returning();
+
+    // 2. Send message to agent (requires a logged-in sender)
+    if (userId && agent.userId) {
+      const imageUrls: string[] = Array.isArray(propertyData.images) ? propertyData.images : [];
+
+      const lines = [
+        "A new property has been submitted for your review.",
+        "",
+        `Title:        ${propertyData.title}`,
+        `Type:         ${propertyData.type}`,
+        `Status:       ${String(propertyData.status).replace(/_/g, " ")}`,
+        `Price:        $${Number(propertyData.price).toLocaleString()}`,
+        "",
+        `Address:      ${propertyData.address}`,
+        `City:         ${propertyData.city}, ${propertyData.state} ${propertyData.zipCode}`,
+        `Country:      ${propertyData.country}`,
+        "",
+        `Bedrooms:     ${propertyData.bedrooms ?? "—"}`,
+        `Bathrooms:    ${propertyData.bathrooms ?? "—"}`,
+        `Sq. Ft.:      ${propertyData.squareFeet ?? "—"}`,
+        `Lot Size:     ${propertyData.lotSize ? `${propertyData.lotSize} sqft` : "—"}`,
+        `Year Built:   ${propertyData.yearBuilt ?? "—"}`,
+        `Garage:       ${propertyData.garage ? "Yes" : "No"}`,
+        `Pool:         ${propertyData.pool ? "Yes" : "No"}`,
+      ];
+
+      if (propertyData.description) {
+        lines.push("", "Description:", propertyData.description);
+      }
+
+      if (imageUrls.length > 0) {
+        lines.push("", `Photos (${imageUrls.length}):`, ...imageUrls);
+      }
+
+      const [msg] = await db
+        .insert(messages)
+        .values({
+          senderId: userId,
+          receiverId: agent.userId,
+          subject: `New property listing: ${propertyData.title}`,
+          message: lines.join("\n"),
+        })
+        .returning();
+
+      // 3. Link message back to the pending listing
+      await db
+        .update(pendingListings)
+        .set({ messageId: msg.id })
+        .where(eq(pendingListings.id, pending.id));
+    }
+
+    return NextResponse.json({ pending: true, id: pending.id }, { status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Failed to create property" }, { status: 500 });

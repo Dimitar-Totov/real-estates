@@ -7,7 +7,9 @@ import {
   boolean,
   timestamp,
   pgEnum,
+  jsonb,
 } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", ["user", "admin", "agent"]);
 
@@ -73,6 +75,7 @@ export const properties = pgTable("properties", {
   pool: boolean("pool").default(false),
   category: propertyCategoryEnum("category").notNull().default("standard"),
   images: text("images").array(),
+  listedByAgentId: integer("listed_by_agent_id").references((): AnyPgColumn => agents.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -165,3 +168,23 @@ export const messages = pgTable("messages", {
 
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
+
+export const pendingListingStatusEnum = pgEnum("pending_listing_status", [
+  "pending",
+  "approved",
+  "declined",
+]);
+
+export const pendingListings = pgTable("pending_listings", {
+  id:           serial("id").primaryKey(),
+  messageId:    integer("message_id").references(() => messages.id, { onDelete: "set null" }),
+  agentId:      integer("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  submittedBy:  integer("submitted_by").references(() => users.id, { onDelete: "set null" }),
+  status:       pendingListingStatusEnum("status").notNull().default("pending"),
+  propertyData: jsonb("property_data").notNull(),
+  createdAt:    timestamp("created_at").defaultNow().notNull(),
+  reviewedAt:   timestamp("reviewed_at"),
+});
+
+export type PendingListing = typeof pendingListings.$inferSelect;
+export type NewPendingListing = typeof pendingListings.$inferInsert;

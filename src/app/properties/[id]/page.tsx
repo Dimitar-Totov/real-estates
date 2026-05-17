@@ -7,6 +7,7 @@ import PropertyGallery from "@/components/PropertyGallery";
 import PropertyAgentCard from "@/components/PropertyAgentCard";
 import { db } from "@/db";
 import { agents } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { verifyToken } from "@/lib/jwt";
 
 export const dynamic = "force-dynamic";
@@ -51,8 +52,19 @@ export default async function PropertyPage({
   const images = await listPropertyImages(property.id, property.images);
   const seed = property.id;
 
-  const allAgents = await db.select({ id: agents.id, userId: agents.userId, name: agents.name }).from(agents);
-  const agent = allAgents.length > 0 ? allAgents[property.id % allAgents.length] : null;
+  // Prefer the agent who approved the listing; fall back to a deterministic pick
+  let agent: { id: number; userId: number | null; name: string } | null = null;
+  if (property.listedByAgentId) {
+    const [listed] = await db
+      .select({ id: agents.id, userId: agents.userId, name: agents.name })
+      .from(agents)
+      .where(eq(agents.id, property.listedByAgentId));
+    agent = listed ?? null;
+  }
+  if (!agent) {
+    const allAgents = await db.select({ id: agents.id, userId: agents.userId, name: agents.name }).from(agents);
+    agent = allAgents.length > 0 ? allAgents[property.id % allAgents.length] : null;
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -116,10 +128,6 @@ export default async function PropertyPage({
                 <span className="font-medium text-gray-600">
                   ${estimateMonthly(property.price)}/mo
                 </span>
-                {" · "}
-                <a href="#" className="text-teal-600 hover:underline font-medium">
-                  Get pre-approved
-                </a>
               </p>
             )}
 
@@ -155,22 +163,6 @@ export default async function PropertyPage({
             <h2 className="text-xl font-bold text-gray-900 mb-4">About this home</h2>
             <div className="space-y-4 text-gray-600 leading-relaxed text-[15px]">
               <p>{property.description}</p>
-              <p>
-                The property is situated in one of the most desirable pockets of the city, within walking
-                distance to top-rated schools, boutique shopping, and an array of dining options. Public
-                transit connections make commuting effortless, while the neighbourhood's tree-lined streets
-                offer the kind of calm you rarely find so close to everything.
-              </p>
-              <p>
-                Recent capital improvements include a full HVAC replacement, new roof, updated electrical
-                panel, and energy-efficient double-glazed windows throughout — giving the next owner peace
-                of mind and lower running costs from day one.
-              </p>
-              <p>
-                Don't miss the opportunity to make this exceptional property your own. Homes of this
-                calibre in this location are extremely rare and are expected to move quickly. Schedule a
-                private showing today to experience it in person.
-              </p>
             </div>
           </div>
 
