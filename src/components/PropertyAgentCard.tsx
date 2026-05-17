@@ -15,11 +15,16 @@ export default function PropertyAgentCard({ seed, agentName, agentUserId, proper
   const [sender, setSender] = useState<MessageSender | null>(null);
   const [showModal, setShowModal] = useState(false);
 
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
   useEffect(() => {
     fetch("/api/user/me")
       .then((r) => r.json())
       .then((data) => {
-        if (data.id) setSender({ id: data.id, name: data.username, email: data.email });
+        if (data.id) {
+          setSender({ id: data.id, name: data.username, email: data.email });
+          setCurrentUserId(data.id);
+        }
       })
       .catch(() => {});
   }, []);
@@ -38,14 +43,16 @@ export default function PropertyAgentCard({ seed, agentName, agentUserId, proper
           <p className="text-gray-700 font-medium truncate">{agentName}</p>
           <p className="text-xs text-gray-400">RealEstate · Top Agent</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          disabled={!agentUserId || !sender}
-          title={!agentUserId ? "Agent has no linked account" : !sender ? "Sign in to send a message" : `Email ${agentName}`}
-          className="ml-auto shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Mail className="w-4 h-4" />
-        </button>
+        {currentUserId !== agentUserId && (
+          <button
+            onClick={() => setShowModal(true)}
+            disabled={!agentUserId || !sender}
+            title={!agentUserId ? "Agent has no linked account" : !sender ? "Sign in to send a message" : `Email ${agentName}`}
+            className="ml-auto shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Mail className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {showModal && sender && agentUserId && (

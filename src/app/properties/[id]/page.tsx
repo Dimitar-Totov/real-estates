@@ -44,8 +44,13 @@ export default async function PropertyPage({
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
   let isAdmin = false;
+  let currentUserId: number | null = null;
   if (token) {
-    try { isAdmin = verifyToken(token).role === "admin"; } catch { /* invalid token */ }
+    try {
+      const payload = verifyToken(token);
+      isAdmin = payload.role === "admin";
+      currentUserId = payload.id;
+    } catch { /* invalid token */ }
   }
 
   const status = STATUS_CONFIG[property.status];
@@ -193,7 +198,7 @@ export default async function PropertyPage({
         {/* ── RIGHT: Sticky sidebar ── */}
         <div className="lg:w-[360px] lg:shrink-0">
           <div className="lg:sticky lg:top-24">
-            {!isAdmin && <TourBookingCard propertyId={property.id} />}
+            {!isAdmin && currentUserId !== agent?.userId && <TourBookingCard propertyId={property.id} />}
 
             <PropertyAgentCard
               seed={seed}
