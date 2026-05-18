@@ -17,7 +17,7 @@ export async function GET(
   if (!id) return NextResponse.json(null);
 
   const [row] = await db
-    .select({ id: pendingListings.id, status: pendingListings.status })
+    .select({ id: pendingListings.id, status: pendingListings.status, propertyData: pendingListings.propertyData })
     .from(pendingListings)
     .where(eq(pendingListings.messageId, id));
 

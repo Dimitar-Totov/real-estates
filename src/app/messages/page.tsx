@@ -12,6 +12,7 @@ import {
   CheckCircle,
   XCircle,
   ChevronRight,
+  Pencil,
 } from "lucide-react";
 
 /* ── Types ─────────────────────────────────────────────────────── */
@@ -277,6 +278,178 @@ function Lightbox({
   );
 }
 
+/* ── Pending listing property data type ────────────────────────── */
+type PendingData = {
+  title?: string;
+  description?: string;
+  price?: string | number;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+  type?: string;
+  status?: string;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  squareFeet?: string | number | null;
+  lotSize?: string | number | null;
+  yearBuilt?: number | null;
+  garage?: boolean;
+  pool?: boolean;
+  [key: string]: unknown;
+};
+
+/* ── Edit listing modal ────────────────────────────────────────── */
+function EditListingModal({
+  pendingId,
+  initialData,
+  onClose,
+  onSaved,
+}: {
+  pendingId: number;
+  initialData: PendingData;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [data, setData] = useState<PendingData>({ ...initialData });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  function field(label: string, key: keyof PendingData, type = "text", opts?: { textarea?: boolean; rows?: number }) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</label>
+        {opts?.textarea ? (
+          <textarea
+            rows={opts.rows ?? 4}
+            value={(data[key] as string) ?? ""}
+            onChange={(e) => setData((d) => ({ ...d, [key]: e.target.value }))}
+            className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-slate-400 focus:bg-white transition-colors resize-none"
+          />
+        ) : (
+          <input
+            type={type}
+            value={(data[key] as string | number) ?? ""}
+            onChange={(e) => setData((d) => ({ ...d, [key]: type === "number" ? (e.target.value === "" ? null : Number(e.target.value)) : e.target.value }))}
+            className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-slate-400 focus:bg-white transition-colors"
+          />
+        )}
+      </div>
+    );
+  }
+
+  async function handleSave() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/pending-listings/${pendingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Failed to save");
+      onSaved();
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-8 py-5 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-3 text-slate-700">
+            <Pencil className="w-5 h-5" />
+            <span className="text-lg font-semibold">Edit Listing Details</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto px-8 py-7 space-y-5 flex-1">
+          {field("Title", "title")}
+          {field("Description", "description", "text", { textarea: true, rows: 5 })}
+          <div className="grid grid-cols-2 gap-4">
+            {field("Price ($)", "price", "number")}
+            {field("Year Built", "yearBuilt", "number")}
+          </div>
+          {field("Address", "address")}
+          <div className="grid grid-cols-3 gap-4">
+            {field("City", "city")}
+            {field("State", "state")}
+            {field("Zip Code", "zipCode")}
+          </div>
+          {field("Country", "country")}
+          <div className="grid grid-cols-2 gap-4">
+            {field("Bedrooms", "bedrooms", "number")}
+            {field("Bathrooms", "bathrooms", "number")}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {field("Square Feet", "squareFeet", "number")}
+            {field("Lot Size (sqft)", "lotSize", "number")}
+          </div>
+          <div className="flex gap-6 pt-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={!!data.garage}
+                onChange={(e) => setData((d) => ({ ...d, garage: e.target.checked }))}
+                className="w-4 h-4 rounded accent-slate-800"
+              />
+              <span className="text-sm font-medium text-slate-700">Garage</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={!!data.pool}
+                onChange={(e) => setData((d) => ({ ...d, pool: e.target.checked }))}
+                className="w-4 h-4 rounded accent-slate-800"
+              />
+              <span className="text-sm font-medium text-slate-700">Pool</span>
+            </label>
+          </div>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-8 py-5 border-t border-slate-100 shrink-0">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function parseRole(): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(/(?:^|;\s*)user-info=([^;]*)/);
@@ -297,8 +470,9 @@ export default function MessagesPage() {
   const [replyTarget, setReplyTarget]           = useState<ReceivedMessage | null>(null);
   const [role, setRole]                         = useState<string | null>(null);
   const [lightbox, setLightbox]                 = useState<{ images: string[]; index: number } | null>(null);
-  const [pendingListing, setPendingListing]     = useState<{ id: number; status: string } | null | undefined>(undefined);
+  const [pendingListing, setPendingListing]     = useState<{ id: number; status: string; propertyData?: PendingData } | null | undefined>(undefined);
   const [reviewLoading, setReviewLoading]       = useState<"approve" | "decline" | null>(null);
+  const [editListing, setEditListing]           = useState(false);
 
   useEffect(() => { setRole(parseRole()); }, []);
 
@@ -385,12 +559,12 @@ export default function MessagesPage() {
   const handleSelectMessage = (msg: ReceivedMessage) => {
     if (selectedReceived?.id === msg.id) {
       setSelectedReceived(null);
-      setPendingListing(undefined);
+      setPendingListing(undefined); setEditListing(false);
       return;
     }
     setSelectedReceived(msg);
     markSeen(msg);
-    setPendingListing(undefined);
+    setPendingListing(undefined); setEditListing(false);
     fetch(`/api/pending-listings/by-message/${msg.id}`)
       .then((r) => r.json())
       .then((data) => setPendingListing(data ?? null))
@@ -495,6 +669,15 @@ export default function MessagesPage() {
           {role === "agent" && pendingListing && (
             pendingListing.status === "pending" ? (
               <>
+                <button
+                  type="button"
+                  onClick={() => setEditListing(true)}
+                  disabled={reviewLoading !== null}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 border border-slate-200 hover:bg-slate-200 hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit
+                </button>
                 <button
                   type="button"
                   onClick={() => handleReview("approve")}
@@ -781,6 +964,23 @@ export default function MessagesPage() {
           original={replyTarget}
           onClose={() => setReplyTarget(null)}
           onSent={() => fetchTab("sent")}
+        />
+      )}
+
+      {editListing && pendingListing?.propertyData && (
+        <EditListingModal
+          pendingId={pendingListing.id}
+          initialData={pendingListing.propertyData}
+          onClose={() => setEditListing(false)}
+          onSaved={() => {
+            // Refresh the pending listing data so the message reflects any updates
+            if (selectedReceived) {
+              fetch(`/api/pending-listings/by-message/${selectedReceived.id}`)
+                .then((r) => r.json())
+                .then((data) => setPendingListing(data ?? null))
+                .catch(() => {});
+            }
+          }}
         />
       )}
 
