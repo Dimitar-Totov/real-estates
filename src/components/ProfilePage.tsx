@@ -84,6 +84,9 @@ export default function ProfilePage({
   const [listings, setListings] = useState<ListingRow[]>(listingsProp);
   useEffect(() => { setListings(listingsProp); }, [listingsProp]);
 
+  const isAgent = listingsProp.length > 0 || listings.length > 0;
+  const [activeTab, setActiveTab] = useState<"showings" | "listings">("showings");
+
   // Internal image display state (overrides prop after a successful upload)
   const [avatarOverride, setAvatarOverride] = useState<string | null>(null);
   const [coverOverride, setCoverOverride] = useState<string | null>(null);
@@ -643,30 +646,82 @@ export default function ProfilePage({
         </div>
 
         {/* Right: showings + agent listings */}
-        <div className="flex-1 min-w-0 flex flex-col gap-10">
-          {/* Requested Showings */}
-          <div>
-            <h2 className="text-base font-semibold text-gray-700 mb-4">Requested Showings</h2>
-            {visitings.length === 0 ? (
-              <p className="text-sm text-gray-400 py-6">No showings requested yet.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                {visitings.map((v) => (
-                  <VisitingPropertyCard key={v.visitingId} visiting={v} />
-                ))}
-              </div>
-            )}
-          </div>
+        <div className="flex-1 min-w-0 flex flex-col gap-6">
 
-          {/* My Listings — only shown when the user has agent listings */}
-          {listings.length > 0 && (
+          {/* Tab switcher — only for agents */}
+          {isAgent && (
+            <div className="inline-flex items-center bg-gray-100 rounded-xl p-1 w-fit">
+              <button
+                onClick={() => setActiveTab("showings")}
+                className={[
+                  "px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
+                  activeTab === "showings"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700",
+                ].join(" ")}
+              >
+                Requested Showings
+                {visitings.length > 0 && (
+                  <span className={[
+                    "ml-2 px-1.5 py-0.5 rounded-full text-xs font-bold",
+                    activeTab === "showings" ? "bg-gray-900 text-white" : "bg-gray-300 text-gray-600",
+                  ].join(" ")}>
+                    {visitings.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("listings")}
+                className={[
+                  "px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
+                  activeTab === "listings"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700",
+                ].join(" ")}
+              >
+                My Listings
+                {listings.length > 0 && (
+                  <span className={[
+                    "ml-2 px-1.5 py-0.5 rounded-full text-xs font-bold",
+                    activeTab === "listings" ? "bg-gray-900 text-white" : "bg-gray-300 text-gray-600",
+                  ].join(" ")}>
+                    {listings.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Requested Showings panel */}
+          {(!isAgent || activeTab === "showings") && (
             <div>
-              <h2 className="text-base font-semibold text-gray-700 mb-4">My Listings</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                {listings.map((listing) => (
-                  <PropertyCard key={listing.id} property={listing} coverImage={listing.coverImage} />
-                ))}
-              </div>
+              {!isAgent && (
+                <h2 className="text-base font-semibold text-gray-700 mb-4">Requested Showings</h2>
+              )}
+              {visitings.length === 0 ? (
+                <p className="text-sm text-gray-400 py-6">No showings requested yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {visitings.map((v) => (
+                    <VisitingPropertyCard key={v.visitingId} visiting={v} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* My Listings panel */}
+          {isAgent && activeTab === "listings" && (
+            <div>
+              {listings.length === 0 ? (
+                <p className="text-sm text-gray-400 py-6">No listings yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {listings.map((listing) => (
+                    <PropertyCard key={listing.id} property={listing} coverImage={listing.coverImage} />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
