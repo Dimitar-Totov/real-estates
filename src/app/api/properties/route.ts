@@ -4,10 +4,14 @@ import { db } from "@/db";
 import { properties, agents, messages, pendingListings, NewProperty } from "@/db/schema";
 import { verifyToken } from "@/lib/jwt";
 
-function tryAuth(req: NextRequest): number | null {
+type AuthPayload = { id: number; role: string } | null;
+
+function tryAuth(req: NextRequest): AuthPayload {
   try {
     const token = req.cookies.get("token")?.value;
-    return token ? verifyToken(token).id : null;
+    if (!token) return null;
+    const payload = verifyToken(token);
+    return { id: payload.id, role: payload.role };
   } catch {
     return null;
   }
@@ -40,9 +44,23 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = tryAuth(request);
+    const auth = tryAuth(request);
     const body = await request.json();
     const { agentId, ...propertyData } = body;
+
+    // Logged-in agent lists directly — no pending, no approval needed
+    if (auth?.role === "agent") {
+      const [agentRow] = await db
+        .select({ id: agents.id })
+        .from(agents)
+        .where(eq(agents.userId, auth.id));
+
+      const [created] = await db
+        .insert(properties)
+        .values({ ...(propertyData as NewProperty), listedByAgentId: agentRow?.id ?? null })
+        .returning();
+      return NextResponse.json(created, { status: 201 });
+    }
 
     // No agent selected — insert directly (admin / direct use)
     if (!agentId) {
@@ -67,13 +85,13 @@ export async function POST(request: NextRequest) {
       .insert(pendingListings)
       .values({
         agentId: agent.id,
-        submittedBy: userId ?? undefined,
+        submittedBy: auth?.id ?? undefined,
         propertyData: propertyData,
       })
       .returning();
 
     // 2. Send message to agent (requires a logged-in sender)
-    if (userId && agent.userId) {
+    if (auth?.id && agent.userId) {
       const imageUrls: string[] = Array.isArray(propertyData.images) ? propertyData.images : [];
 
       const lines = [
@@ -108,7 +126,7 @@ export async function POST(request: NextRequest) {
       const [msg] = await db
         .insert(messages)
         .values({
-          senderId: userId,
+          senderId: auth.id,
           receiverId: agent.userId,
           subject: `New property listing: ${propertyData.title}`,
           message: lines.join("\n"),

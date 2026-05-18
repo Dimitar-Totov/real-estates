@@ -1,0 +1,2 @@
+ALTER TABLE "property_visitings" ADD COLUMN "message_id" integer;--> statement-breakpoint
+ALTER TABLE "property_visitings" ADD CONSTRAINT "property_visitings_message_id_messages_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."messages"("id") ON DELETE set null ON UPDATE no action;

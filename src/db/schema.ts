@@ -130,6 +130,7 @@ export const propertyVisitings = pgTable("property_visitings", {
   hour: integer("hour").notNull(),
   status: visitingStatusEnum("status").notNull().default("pending"),
   notes: text("notes"),
+  messageId: integer("message_id").references((): AnyPgColumn => messages.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

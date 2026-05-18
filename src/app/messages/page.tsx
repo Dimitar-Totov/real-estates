@@ -278,6 +278,15 @@ function Lightbox({
   );
 }
 
+/* ── Showing visiting type ─────────────────────────────────────── */
+type ShowingVisiting = {
+  id: number;
+  status: "pending" | "confirmed" | "cancelled";
+  visitDate: string;
+  hour: number;
+  propertyId: number;
+};
+
 /* ── Pending listing property data type ────────────────────────── */
 type PendingData = {
   title?: string;
@@ -474,6 +483,9 @@ export default function MessagesPage() {
   const [reviewLoading, setReviewLoading]       = useState<"approve" | "decline" | null>(null);
   const [editListing, setEditListing]           = useState(false);
   const [sentPendingStatus, setSentPendingStatus] = useState<string | null | undefined>(undefined);
+  const [showingVisiting, setShowingVisiting]   = useState<ShowingVisiting | null | undefined>(undefined);
+  const [showingLoading, setShowingLoading]     = useState<"confirm" | "cancel" | null>(null);
+  const [sentShowingStatus, setSentShowingStatus] = useState<string | null | undefined>(undefined);
 
   useEffect(() => { setRole(parseRole()); }, []);
 
@@ -503,6 +515,8 @@ export default function MessagesPage() {
     setSelectedReceived(null);
     setSelectedSent(null);
     setSentPendingStatus(undefined);
+    setShowingVisiting(undefined);
+    setSentShowingStatus(undefined);
   };
 
 /* ── Sidebar ── */
@@ -562,15 +576,21 @@ export default function MessagesPage() {
     if (selectedReceived?.id === msg.id) {
       setSelectedReceived(null);
       setPendingListing(undefined); setEditListing(false);
+      setShowingVisiting(undefined);
       return;
     }
     setSelectedReceived(msg);
     markSeen(msg);
     setPendingListing(undefined); setEditListing(false);
+    setShowingVisiting(undefined);
     fetch(`/api/pending-listings/by-message/${msg.id}`)
       .then((r) => r.json())
       .then((data) => setPendingListing(data ?? null))
       .catch(() => setPendingListing(null));
+    fetch(`/api/visitings/by-message/${msg.id}`)
+      .then((r) => r.json())
+      .then((data) => setShowingVisiting(data ?? null))
+      .catch(() => setShowingVisiting(null));
   };
 
   const handleReview = async (action: "approve" | "decline") => {
@@ -584,6 +604,24 @@ export default function MessagesPage() {
       // leave state unchanged so user can retry
     } finally {
       setReviewLoading(null);
+    }
+  };
+
+  const handleShowingReview = async (action: "confirm" | "cancel") => {
+    if (!showingVisiting) return;
+    setShowingLoading(action);
+    try {
+      const res = await fetch(`/api/visitings/${showingVisiting.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: action === "confirm" ? "confirmed" : "cancelled" }),
+      });
+      if (!res.ok) throw new Error();
+      setShowingVisiting({ ...showingVisiting, status: action === "confirm" ? "confirmed" : "cancelled" });
+    } catch {
+      // leave state unchanged so user can retry
+    } finally {
+      setShowingLoading(null);
     }
   };
 
@@ -716,6 +754,45 @@ export default function MessagesPage() {
               </span>
             )
           )}
+          {role === "agent" && showingVisiting && (
+            showingVisiting.status === "pending" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleShowingReview("confirm")}
+                  disabled={showingLoading !== null}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {showingLoading === "confirm"
+                    ? <span className="w-4 h-4 border-2 border-emerald-500/40 border-t-emerald-600 rounded-full animate-spin" />
+                    : <CheckCircle className="w-4 h-4" />}
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleShowingReview("cancel")}
+                  disabled={showingLoading !== null}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {showingLoading === "cancel"
+                    ? <span className="w-4 h-4 border-2 border-red-400/40 border-t-red-500 rounded-full animate-spin" />
+                    : <XCircle className="w-4 h-4" />}
+                  Decline
+                </button>
+              </>
+            ) : (
+              <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold border ${
+                showingVisiting.status === "confirmed"
+                  ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                  : "text-red-600 bg-red-50 border-red-200"
+              }`}>
+                {showingVisiting.status === "confirmed"
+                  ? <CheckCircle className="w-4 h-4" />
+                  : <XCircle className="w-4 h-4" />}
+                {showingVisiting.status === "confirmed" ? "Accepted" : "Declined"}
+              </span>
+            )
+          )}
           <button
             onClick={() => setReplyTarget(selectedReceived)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
@@ -788,14 +865,20 @@ export default function MessagesPage() {
     if (selectedSent?.id === msg.id) {
       setSelectedSent(null);
       setSentPendingStatus(undefined);
+      setSentShowingStatus(undefined);
       return;
     }
     setSelectedSent(msg);
     setSentPendingStatus(undefined);
+    setSentShowingStatus(undefined);
     fetch(`/api/pending-listings/by-message/${msg.id}`)
       .then((r) => r.json())
       .then((data) => setSentPendingStatus(data?.status ?? null))
       .catch(() => setSentPendingStatus(null));
+    fetch(`/api/visitings/by-message/${msg.id}`)
+      .then((r) => r.json())
+      .then((data) => setSentShowingStatus(data?.status ?? null))
+      .catch(() => setSentShowingStatus(null));
   };
 
   /* ── Sent list ── */
@@ -895,6 +978,28 @@ export default function MessagesPage() {
                 <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-red-50 text-red-600 border border-red-200">
                   <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
                   Declined
+                </span>
+              )}
+            </div>
+          )}
+          {sentShowingStatus !== undefined && sentShowingStatus !== null && (
+            <div className="flex items-center gap-2">
+              {sentShowingStatus === "pending" && (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                  Showing Pending
+                </span>
+              )}
+              {sentShowingStatus === "confirmed" && (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  Showing Accepted
+                </span>
+              )}
+              {sentShowingStatus === "cancelled" && (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-red-50 text-red-600 border border-red-200">
+                  <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                  Showing Declined
                 </span>
               )}
             </div>

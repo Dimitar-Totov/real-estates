@@ -47,8 +47,14 @@ export default function PropertyForm() {
   const [agentIndex, setAgentIndex] = useState(0);
   const [agentsLoading, setAgentsLoading] = useState(true);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
+  const [isAgent, setIsAgent] = useState(false);
 
   useEffect(() => {
+    fetch("/api/user/me")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.role === "agent") setIsAgent(true); })
+      .catch(() => {});
+
     fetch("/api/agents")
       .then((r) => r.json())
       .then((data: Agent[]) => {
@@ -165,7 +171,7 @@ export default function PropertyForm() {
         garage: data.garage === "on",
         pool: data.pool === "on",
         images: imageUrls.length > 0 ? imageUrls : undefined,
-        agentId: data.agentId || undefined,
+        agentId: isAgent ? undefined : (data.agentId || undefined),
       };
 
       const res = await fetch("/api/properties", {
@@ -226,7 +232,7 @@ export default function PropertyForm() {
     <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-8 items-start">
 
       {/* ── Left column: agent selector (sticky on desktop) ── */}
-      <div className="w-full lg:w-[28rem] xl:w-[32rem] lg:sticky lg:top-6 space-y-5">
+      <div className={`w-full lg:w-[28rem] xl:w-[32rem] lg:sticky lg:top-6 space-y-5${isAgent ? " hidden" : ""}`}>
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
             Choose an agent
@@ -494,7 +500,7 @@ export default function PropertyForm() {
           disabled={loading}
           className="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
         >
-          {loading ? loadingMsg : "Send to Agent"}
+          {loading ? loadingMsg : isAgent ? "Sell the Property" : "Send to Agent"}
         </button>
       </div>
 
