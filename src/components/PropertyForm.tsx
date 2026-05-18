@@ -104,6 +104,12 @@ export default function PropertyForm() {
     const form = e.currentTarget;
     const data = Object.fromEntries(new FormData(form));
 
+    if (images.length < 2) {
+      setError("Please upload at least 2 images of the property.");
+      setLoading(false);
+      return;
+    }
+
     try {
       // 1. Upload images directly to R2 via presigned URLs
       let imageUrls: string[] = [];
