@@ -155,6 +155,7 @@ export default function AgentsSearchView({ agents: initial }: { agents: AgentRow
                     key={agent.id}
                     agent={agent}
                     isAdmin={isAdmin}
+                    isOwnCard={agent.userId === sender?.id}
                     onDelete={handleDelete}
                     onEmail={() => setMessageTarget(agent)}
                   />

@@ -20,11 +20,13 @@ interface Agent {
 export default function AgentCard({
   agent,
   isAdmin = false,
+  isOwnCard = false,
   onDelete,
   onEmail,
 }: {
   agent: Agent;
   isAdmin?: boolean;
+  isOwnCard?: boolean;
   onDelete?: (id: string) => void;
   onEmail?: () => void;
 }) {
@@ -157,27 +159,29 @@ export default function AgentCard({
           </div>
 
           {/* Email button */}
-          <div className="flex gap-2 pt-2">
-            <button
-              onClick={(e) => { e.stopPropagation(); onEmail?.(); }}
-              className="w-full border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          {!isOwnCard && (
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); onEmail?.(); }}
+                className="w-full border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-              Email
-            </button>
-          </div>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                Email
+              </button>
+            </div>
+          )}
 
           {/* Delete — admin only */}
           {isAdmin && (
