@@ -488,7 +488,7 @@ export default function PropertyForm() {
           disabled={loading}
           className="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
         >
-          {loading ? loadingMsg : "Add Property"}
+          {loading ? loadingMsg : "Send to Agent"}
         </button>
       </div>
 
