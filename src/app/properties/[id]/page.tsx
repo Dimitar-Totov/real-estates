@@ -6,8 +6,9 @@ import TourBookingCard from "@/components/TourBookingCard";
 import PropertyGallery from "@/components/PropertyGallery";
 import PropertyAgentCard from "@/components/PropertyAgentCard";
 import { db } from "@/db";
-import { agents } from "@/db/schema";
+import { agents, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { cdnUrl } from "@/services/userImagesService";
 import { verifyToken } from "@/lib/jwt";
 
 export const dynamic = "force-dynamic";
@@ -55,20 +56,29 @@ export default async function PropertyPage({
 
   const status = STATUS_CONFIG[property.status];
   const images = await listPropertyImages(property.id, property.images);
-  const seed = property.id;
-
   // Prefer the agent who approved the listing; fall back to a deterministic pick
-  let agent: { id: number; userId: number | null; name: string } | null = null;
+  type AgentRow = { id: number; userId: number | null; name: string; image: string | null };
+
+  function resolveAgentImage(row: { image: string; avatarKey: string | null }): string | null {
+    return row.avatarKey ? cdnUrl(row.avatarKey) : row.image || null;
+  }
+
+  let agent: AgentRow | null = null;
   if (property.listedByAgentId) {
     const [listed] = await db
-      .select({ id: agents.id, userId: agents.userId, name: agents.name })
+      .select({ id: agents.id, userId: agents.userId, name: agents.name, image: agents.image, avatarKey: users.avatarKey })
       .from(agents)
+      .leftJoin(users, eq(agents.userId, users.id))
       .where(eq(agents.id, property.listedByAgentId));
-    agent = listed ?? null;
+    if (listed) agent = { ...listed, image: resolveAgentImage(listed) };
   }
   if (!agent) {
-    const allAgents = await db.select({ id: agents.id, userId: agents.userId, name: agents.name }).from(agents);
-    agent = allAgents.length > 0 ? allAgents[property.id % allAgents.length] : null;
+    const allAgents = await db
+      .select({ id: agents.id, userId: agents.userId, name: agents.name, image: agents.image, avatarKey: users.avatarKey })
+      .from(agents)
+      .leftJoin(users, eq(agents.userId, users.id));
+    const raw = allAgents.length > 0 ? allAgents[property.id % allAgents.length] : null;
+    if (raw) agent = { ...raw, image: resolveAgentImage(raw) };
   }
 
   return (
@@ -193,10 +203,12 @@ export default async function PropertyPage({
             {!isAdmin && currentUserId !== agent?.userId && <TourBookingCard propertyId={property.id} />}
 
             <PropertyAgentCard
-              seed={seed}
               agentName={agent?.name ?? "Top Agent"}
               agentUserId={agent?.userId ?? null}
+              agentImage={agent?.image ?? null}
               propertyTitle={property.title}
+              propertyId={property.id}
+              isOwnListing={!!agent && agent.userId === currentUserId}
             />
           </div>
         </div>

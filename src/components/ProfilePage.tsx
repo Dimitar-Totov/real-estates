@@ -12,6 +12,10 @@ import {
   X,
 } from "lucide-react";
 import VisitingPropertyCard, { type VisitingRow } from "@/components/VisitingPropertyCard";
+import PropertyCard from "@/components/PropertyCard";
+import { type Property } from "@/db/schema";
+
+type ListingRow = Property & { coverImage: string | null };
 
 /* ── Inline SVG brand icons (not in this lucide-react build) ── */
 const FacebookSvg = ({ className = "w-5 h-5 sm:w-4 sm:h-4 shrink-0" }: { className?: string }) => (
@@ -40,22 +44,6 @@ function toAbsoluteUrl(url: string): string {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
 
-interface Social {
-  platform: string;
-  handle: string;
-  url: string;
-}
-
-interface PropertyItem {
-  id: string | number;
-  title: string;
-  image: string;
-  price: string;
-  beds: number;
-  baths: number;
-  sqft: number;
-}
-
 interface ProfilePageProps {
   coverImage?: string;
   avatarImage?: string;
@@ -65,10 +53,8 @@ interface ProfilePageProps {
   socials?: { facebook?: string; linkedin?: string; twitter?: string };
   phone: { office: string; mobile: string };
   email: string;
-  onChat?: () => void;
-  properties?: PropertyItem[];
-  onPropertyClick?: (property: PropertyItem) => void;
   visitings?: VisitingRow[];
+  listings?: ListingRow[];
   /** Return the new public URL on success, or throw on failure. */
   onAvatarChange?: (file: File) => Promise<string>;
   onCoverChange?: (file: File) => Promise<string>;
@@ -87,6 +73,7 @@ export default function ProfilePage({
   phone,
   email,
   visitings = [],
+  listings: listingsProp = [],
   onAvatarChange,
   onCoverChange,
   isOwnProfile = false,
@@ -94,6 +81,9 @@ export default function ProfilePage({
   onSocialsChange,
   onContactChange,
 }: ProfilePageProps) {
+  const [listings, setListings] = useState<ListingRow[]>(listingsProp);
+  useEffect(() => { setListings(listingsProp); }, [listingsProp]);
+
   // Internal image display state (overrides prop after a successful upload)
   const [avatarOverride, setAvatarOverride] = useState<string | null>(null);
   const [coverOverride, setCoverOverride] = useState<string | null>(null);
@@ -336,11 +326,13 @@ export default function ProfilePage({
 
       {/* Upload error toast */}
       {uploadError && (
-        <div className="max-w-6xl mx-auto w-full px-6 sm:px-10 mt-4 flex items-center gap-3 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
-          <span className="flex-1">{uploadError}</span>
-          <button onClick={() => setUploadError(null)} aria-label="Dismiss">
-            <X className="w-4 h-4" />
-          </button>
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+          <div className="flex items-center gap-3 py-3 px-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm shadow-lg">
+            <span className="flex-1">{uploadError}</span>
+            <button onClick={() => setUploadError(null)} aria-label="Dismiss">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -650,16 +642,31 @@ export default function ProfilePage({
           )}
         </div>
 
-        {/* Right: Requested showings grid */}
-        <div className="flex-1 min-w-0">
-          <h2 className="text-base font-semibold text-gray-700 mb-4">Requested Showings</h2>
-          {visitings.length === 0 ? (
-            <p className="text-sm text-gray-400 py-6">No showings requested yet.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-              {visitings.map((v) => (
-                <VisitingPropertyCard key={v.visitingId} visiting={v} />
-              ))}
+        {/* Right: showings + agent listings */}
+        <div className="flex-1 min-w-0 flex flex-col gap-10">
+          {/* Requested Showings */}
+          <div>
+            <h2 className="text-base font-semibold text-gray-700 mb-4">Requested Showings</h2>
+            {visitings.length === 0 ? (
+              <p className="text-sm text-gray-400 py-6">No showings requested yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                {visitings.map((v) => (
+                  <VisitingPropertyCard key={v.visitingId} visiting={v} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* My Listings — only shown when the user has agent listings */}
+          {listings.length > 0 && (
+            <div>
+              <h2 className="text-base font-semibold text-gray-700 mb-4">My Listings</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                {listings.map((listing) => (
+                  <PropertyCard key={listing.id} property={listing} coverImage={listing.coverImage} />
+                ))}
+              </div>
             </div>
           )}
         </div>

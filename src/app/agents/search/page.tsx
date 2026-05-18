@@ -1,6 +1,8 @@
 import { db } from "@/db";
-import { agents } from "@/db/schema";
+import { agents, users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import AgentsSearchView from "@/components/AgentsSearchView";
+import { cdnUrl } from "@/services/userImagesService";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ export default async function AgentsSearchPage() {
       specialty:  agents.specialty,
       city:       agents.city,
       image:      agents.image,
+      avatarKey:  users.avatarKey,
       rating:     agents.rating,
       reviews:    agents.reviews,
       experience: agents.experience,
@@ -20,6 +23,7 @@ export default async function AgentsSearchPage() {
       email:      agents.email,
     })
     .from(agents)
+    .leftJoin(users, eq(agents.userId, users.id))
     .orderBy(agents.createdAt);
 
   const agentList = rows.map((a) => ({
@@ -27,6 +31,7 @@ export default async function AgentsSearchPage() {
     id:     String(a.id),
     userId: a.userId ?? null,
     rating: Number(a.rating),
+    image:  a.avatarKey ? cdnUrl(a.avatarKey) : a.image,
   }));
 
   return <AgentsSearchView agents={agentList} />;

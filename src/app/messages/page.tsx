@@ -473,6 +473,7 @@ export default function MessagesPage() {
   const [pendingListing, setPendingListing]     = useState<{ id: number; status: string; propertyData?: PendingData } | null | undefined>(undefined);
   const [reviewLoading, setReviewLoading]       = useState<"approve" | "decline" | null>(null);
   const [editListing, setEditListing]           = useState(false);
+  const [sentPendingStatus, setSentPendingStatus] = useState<string | null | undefined>(undefined);
 
   useEffect(() => { setRole(parseRole()); }, []);
 
@@ -501,6 +502,7 @@ export default function MessagesPage() {
     setTab(t);
     setSelectedReceived(null);
     setSelectedSent(null);
+    setSentPendingStatus(undefined);
   };
 
 /* ── Sidebar ── */
@@ -785,9 +787,15 @@ export default function MessagesPage() {
   const handleSelectSent = (msg: SentMessage) => {
     if (selectedSent?.id === msg.id) {
       setSelectedSent(null);
+      setSentPendingStatus(undefined);
       return;
     }
     setSelectedSent(msg);
+    setSentPendingStatus(undefined);
+    fetch(`/api/pending-listings/by-message/${msg.id}`)
+      .then((r) => r.json())
+      .then((data) => setSentPendingStatus(data?.status ?? null))
+      .catch(() => setSentPendingStatus(null));
   };
 
   /* ── Sent list ── */
@@ -869,6 +877,28 @@ export default function MessagesPage() {
             <Clock className="w-4 h-4" />
             <span>{formatFullDate(selectedSent.sentAt)}</span>
           </div>
+          {sentPendingStatus !== undefined && sentPendingStatus !== null && (
+            <div className="flex items-center gap-2">
+              {sentPendingStatus === "pending" && (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                  <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                  Pending
+                </span>
+              )}
+              {sentPendingStatus === "approved" && (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  Approved
+                </span>
+              )}
+              {sentPendingStatus === "declined" && (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-red-50 text-red-600 border border-red-200">
+                  <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                  Declined
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

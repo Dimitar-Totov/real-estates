@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, desc } from "drizzle-orm";
 import { verifyToken } from "@/lib/jwt";
 import { db } from "@/db";
 import { messages, users } from "@/db/schema";
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       .from(messages)
       .leftJoin(receiver, eq(messages.receiverId, receiver.id))
       .where(eq(messages.senderId, payload.id))
-      .orderBy(messages.sentAt);
+      .orderBy(desc(messages.sentAt));
 
     return NextResponse.json(rows);
   }
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     .from(messages)
     .leftJoin(sender, eq(messages.senderId, sender.id))
     .where(eq(messages.receiverId, payload.id))
-    .orderBy(messages.sentAt);
+    .orderBy(desc(messages.sentAt));
 
   return NextResponse.json(rows);
 }

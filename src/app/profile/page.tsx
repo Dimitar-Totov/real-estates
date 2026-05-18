@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ProfilePage from "@/components/ProfilePage";
 import AdminPanel from "@/components/AdminPanel";
 import { type VisitingRow } from "@/components/VisitingPropertyCard";
+import { type Property } from "@/db/schema";
 
 type UserProfile = {
   id: number;
@@ -21,10 +22,13 @@ type UserProfile = {
   contactEmail: string | null;
 };
 
+type ListingRow = Property & { coverImage: string | null };
+
 export default function ProfileRoute() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [visitings, setVisitings] = useState<VisitingRow[]>([]);
+  const [listings, setListings] = useState<ListingRow[]>([]);
 
   useEffect(() => {
     fetch("/api/user/me")
@@ -35,6 +39,11 @@ export default function ProfileRoute() {
     fetch("/api/visitings/my")
       .then((r) => (r.ok ? r.json() : []))
       .then(setVisitings)
+      .catch(() => {});
+
+    fetch("/api/properties/my")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setListings)
       .catch(() => {});
   }, [router]);
 
@@ -119,6 +128,7 @@ export default function ProfileRoute() {
         phone={{ office: profile.officePhone ?? "", mobile: profile.mobilePhone ?? "" }}
         email={profile.contactEmail ?? ""}
         visitings={visitings}
+        listings={listings}
         onAvatarChange={makeUploadHandler("avatar")}
         onCoverChange={makeUploadHandler("cover")}
         isOwnProfile={true}
