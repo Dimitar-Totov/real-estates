@@ -19,10 +19,10 @@ export default function PropertyCard({ property, coverImage }: { property: Prope
   return (
     <Link
       href={`/properties/${property.id}`}
-      className="group flex flex-col rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300"
+      className="group flex flex-col rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 min-w-0"
     >
       {/* ── Image area ── */}
-      <div className="relative h-52 bg-gradient-to-br from-slate-100 via-gray-50 to-slate-200 overflow-hidden flex items-center justify-center">
+      <div className="relative h-64 bg-gradient-to-br from-slate-100 via-gray-50 to-slate-200 overflow-hidden flex items-center justify-center">
         {coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -40,12 +40,12 @@ export default function PropertyCard({ property, coverImage }: { property: Prope
         )}
 
         {/* Status badge */}
-        <span className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_COLORS[property.status]}`}>
+        <span className={`absolute top-3 left-3 text-sm font-semibold px-3 py-1.5 rounded-full ${STATUS_COLORS[property.status]}`}>
           {STATUS_LABELS[property.status]}
         </span>
 
         {/* Type badge */}
-        <span className="absolute top-3 right-3 bg-black/25 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full capitalize">
+        <span className="absolute top-3 right-3 bg-black/25 backdrop-blur-sm text-white text-sm font-medium px-3 py-1.5 rounded-full capitalize">
           {property.type.replace("_", " ")}
         </span>
 
@@ -54,24 +54,24 @@ export default function PropertyCard({ property, coverImage }: { property: Prope
       </div>
 
       {/* ── Content ── */}
-      <div className="flex flex-col flex-1 p-4 gap-1.5">
+      <div className="flex flex-col flex-1 p-5 gap-2">
 
         {/* Price */}
-        <p className="text-xl font-bold text-[#CC0000] leading-tight">
+        <p className="text-2xl font-bold text-[#CC0000] leading-tight">
           ${Number(property.price).toLocaleString()}
           {property.status === "for_rent" && (
-            <span className="text-sm font-normal text-gray-400 ml-0.5">/mo</span>
+            <span className="text-base font-normal text-gray-400 ml-1">/mo</span>
           )}
         </p>
 
         {/* Title */}
-        <h2 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-1">
+        <h2 className="font-semibold text-gray-900 text-base leading-snug line-clamp-1">
           {property.title}
         </h2>
 
         {/* Location */}
-        <p className="flex items-center gap-1 text-xs text-gray-400">
-          <svg className="w-3.5 h-3.5 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <p className="flex items-center gap-1.5 text-sm text-gray-400">
+          <svg className="w-4 h-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/>
           </svg>
@@ -79,26 +79,26 @@ export default function PropertyCard({ property, coverImage }: { property: Prope
         </p>
 
         {/* Stats row */}
-        <div className="mt-auto pt-3 border-t border-gray-100 flex items-center gap-4 text-sm text-gray-500">
+        <div className="mt-auto pt-4 border-t border-gray-100 flex items-center gap-5 text-base text-gray-500">
           {property.bedrooms != null && (
-            <span className="flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <span className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
               </svg>
               {property.bedrooms} bd
             </span>
           )}
           {property.bathrooms != null && (
-            <span className="flex items-center gap-1.5">
-              <svg className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <span className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
               {property.bathrooms} ba
             </span>
           )}
           {property.squareFeet != null && (
-            <span className="flex items-center gap-1.5 ml-auto text-xs text-gray-400">
-              <svg className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <span className="flex items-center gap-2 ml-auto text-sm text-gray-400">
+              <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/>
               </svg>
               {Number(property.squareFeet).toLocaleString()} sqft

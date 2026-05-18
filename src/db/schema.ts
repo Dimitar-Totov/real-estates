@@ -189,3 +189,18 @@ export const pendingListings = pgTable("pending_listings", {
 
 export type PendingListing = typeof pendingListings.$inferSelect;
 export type NewPendingListing = typeof pendingListings.$inferInsert;
+
+export const meetings = pgTable("meetings", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").references(() => agents.id, { onDelete: "cascade" }),
+  meetingDate: timestamp("meeting_date").notNull(),
+  propertyTitle: text("property_title").notNull(),
+  propertyAddress: text("property_address").notNull(),
+  requesterUsername: text("requester_username").notNull(),
+  requesterPhone: text("requester_phone"),
+  requesterEmail: text("requester_email"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Meeting = typeof meetings.$inferSelect;
+export type NewMeeting = typeof meetings.$inferInsert;

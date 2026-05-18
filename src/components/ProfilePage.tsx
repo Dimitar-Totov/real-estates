@@ -1,36 +1,39 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Camera,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   Mail,
   MapPin,
   PenLine,
   Phone,
+  User,
   X,
 } from "lucide-react";
-import VisitingPropertyCard, { type VisitingRow } from "@/components/VisitingPropertyCard";
+import VisitingPropertyCard, { type VisitingRow, formatHour } from "@/components/VisitingPropertyCard";
 import PropertyCard from "@/components/PropertyCard";
-import { type Property } from "@/db/schema";
+import { type Property, type Meeting } from "@/db/schema";
 
 type ListingRow = Property & { coverImage: string | null };
 
-/* ── Inline SVG brand icons (not in this lucide-react build) ── */
-const FacebookSvg = ({ className = "w-5 h-5 sm:w-4 sm:h-4 shrink-0" }: { className?: string }) => (
+/* ── Inline SVG brand icons ── */
+const FacebookSvg = ({ className = "w-4 h-4 shrink-0" }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
     <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
   </svg>
 );
-const LinkedInSvg = ({ className = "w-5 h-5 sm:w-4 sm:h-4 shrink-0" }: { className?: string }) => (
+const LinkedInSvg = ({ className = "w-4 h-4 shrink-0" }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
     <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
     <rect x="2" y="9" width="4" height="12" />
     <circle cx="4" cy="4" r="2" />
   </svg>
 );
-const TwitterSvg = ({ className = "w-5 h-5 sm:w-4 sm:h-4 shrink-0" }: { className?: string }) => (
+const TwitterSvg = ({ className = "w-4 h-4 shrink-0" }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
   </svg>
@@ -38,6 +41,7 @@ const TwitterSvg = ({ className = "w-5 h-5 sm:w-4 sm:h-4 shrink-0" }: { classNam
 
 const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 5 * 1024 * 1024;
+const CARD_SCROLL_STEP = 344;
 
 function toAbsoluteUrl(url: string): string {
   if (!url) return url;
@@ -55,13 +59,15 @@ interface ProfilePageProps {
   email: string;
   visitings?: VisitingRow[];
   listings?: ListingRow[];
-  /** Return the new public URL on success, or throw on failure. */
+  meetings?: Meeting[];
   onAvatarChange?: (file: File) => Promise<string>;
   onCoverChange?: (file: File) => Promise<string>;
   isOwnProfile?: boolean;
   onLocationChange?: (location: string) => Promise<void>;
   onSocialsChange?: (socials: { facebook?: string; linkedin?: string; twitter?: string }) => Promise<void>;
   onContactChange?: (contact: { officePhone: string; mobilePhone: string; email: string }) => Promise<void>;
+  onAcceptVisiting?: (visitingId: number) => Promise<void>;
+  onDeclineVisiting?: (visitingId: number) => Promise<void>;
 }
 
 export default function ProfilePage({
@@ -74,39 +80,56 @@ export default function ProfilePage({
   email,
   visitings = [],
   listings: listingsProp = [],
+  meetings = [],
   onAvatarChange,
   onCoverChange,
   isOwnProfile = false,
   onLocationChange,
   onSocialsChange,
   onContactChange,
+  onAcceptVisiting,
+  onDeclineVisiting,
 }: ProfilePageProps) {
   const [listings, setListings] = useState<ListingRow[]>(listingsProp);
   useEffect(() => { setListings(listingsProp); }, [listingsProp]);
 
-  const isAgent = listingsProp.length > 0 || listings.length > 0;
-  const [activeTab, setActiveTab] = useState<"showings" | "listings">("showings");
+  const [visitingsState, setVisitingsState] = useState<VisitingRow[]>(visitings);
+  useEffect(() => { setVisitingsState(visitings); }, [visitings]);
 
-  // Internal image display state (overrides prop after a successful upload)
+  const isAgent = listingsProp.length > 0 || listings.length > 0;
+  const [activeTab, setActiveTab] = useState<"showings" | "listings" | "meetings">("showings");
+
+  // Images
   const [avatarOverride, setAvatarOverride] = useState<string | null>(null);
   const [coverOverride, setCoverOverride] = useState<string | null>(null);
   const avatarSrc = avatarOverride ?? avatarImage;
   const coverSrc = coverOverride ?? coverImage;
-
-  // Upload states
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Edit states
+  // Toasts
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showSuccessToast = (msg: string) => {
+    setSuccessToast(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setSuccessToast(null), 4000);
+  };
+
+  // Location edit
   const [editingLocation, setEditingLocation] = useState(false);
   const [locationValue, setLocationValue] = useState(location);
-  const [editingSocials, setEditingSocials] = useState(false);
-  const [socialsValue, setSocialsValue] = useState(socials);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Contact edit state
+  // Socials edit
+  const [editingSocials, setEditingSocials] = useState(false);
+  const [socialsValue, setSocialsValue] = useState(socials);
+
+  // Contact edit (null = not editing)
   const [editingContact, setEditingContact] = useState<"officePhone" | "mobilePhone" | "email" | null>(null);
   const [contactValue, setContactValue] = useState({ officePhone: phone.office, mobilePhone: phone.mobile, email });
   const [contactSaveError, setContactSaveError] = useState<string | null>(null);
@@ -127,605 +150,476 @@ export default function ProfilePage({
     contactErrorTimerRef.current = setTimeout(() => setContactSaveError(null), 3000);
   };
 
-  const handleSaveContact = async () => {
-    if (!onContactChange) return;
+  // Carousel
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
-    if (contactValue.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactValue.email)) {
-      showContactError("Please enter a valid email address.");
-      return;
-    }
+  const checkScroll = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) { setCanScrollLeft(false); setCanScrollRight(false); return; }
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
 
-    setContactSaveError(null);
-    setIsSaving(true);
-    try {
-      await onContactChange(contactValue);
-      setEditingContact(null);
-    } catch (err) {
-      showContactError(err instanceof Error ? err.message : "Failed to save.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  useEffect(() => {
+    if (carouselRef.current) carouselRef.current.scrollLeft = 0;
+    // Small timeout to allow DOM to settle after tab switch
+    const t = setTimeout(checkScroll, 50);
+    return () => clearTimeout(t);
+  }, [activeTab, checkScroll]);
 
-  // Hidden file inputs
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const t = setTimeout(checkScroll, 50);
+    return () => clearTimeout(t);
+  }, [visitingsState.length, listings.length, checkScroll]);
 
+  const scrollCarouselLeft = () => carouselRef.current?.scrollBy({ left: -CARD_SCROLL_STEP, behavior: "smooth" });
+  const scrollCarouselRight = () => carouselRef.current?.scrollBy({ left: CARD_SCROLL_STEP, behavior: "smooth" });
 
-  const handleFileSelect = async (
-    file: File,
-    type: "avatar" | "cover",
-    callback: (f: File) => Promise<string>,
-  ) => {
+  // ── Handlers ──
+
+  const handleFileSelect = async (file: File, type: "avatar" | "cover", callback: (f: File) => Promise<string>) => {
     setUploadError(null);
-
-    if (!ALLOWED.includes(file.type)) {
-      setUploadError("Only JPEG, PNG, or WebP images are allowed.");
-      return;
-    }
-    if (file.size > MAX_SIZE) {
-      setUploadError("File must be under 5 MB.");
-      return;
-    }
-
+    if (!ALLOWED.includes(file.type)) { setUploadError("Only JPEG, PNG, or WebP images are allowed."); return; }
+    if (file.size > MAX_SIZE) { setUploadError("File must be under 5 MB."); return; }
     try {
-      if (type === "avatar") setUploadingAvatar(true);
-      else setUploadingCover(true);
-
+      if (type === "avatar") setUploadingAvatar(true); else setUploadingCover(true);
       const newUrl = await callback(file);
-
-      if (type === "avatar") setAvatarOverride(newUrl);
-      else setCoverOverride(newUrl);
+      if (type === "avatar") setAvatarOverride(newUrl); else setCoverOverride(newUrl);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed. Please try again.");
     } finally {
-      if (type === "avatar") setUploadingAvatar(false);
-      else setUploadingCover(false);
+      if (type === "avatar") setUploadingAvatar(false); else setUploadingCover(false);
     }
   };
 
   const handleSaveLocation = async () => {
     if (!onLocationChange) return;
-    setSaveError(null);
-    setIsSaving(true);
-    try {
-      await onLocationChange(locationValue);
-      setEditingLocation(false);
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to save location.");
-    } finally {
-      setIsSaving(false);
-    }
+    setSaveError(null); setIsSaving(true);
+    try { await onLocationChange(locationValue); setEditingLocation(false); }
+    catch (err) { setSaveError(err instanceof Error ? err.message : "Failed to save location."); }
+    finally { setIsSaving(false); }
   };
 
   const handleSaveSocials = async () => {
     if (!onSocialsChange) return;
-    setSaveError(null);
-    setIsSaving(true);
-    try {
-      await onSocialsChange(socialsValue);
-      setEditingSocials(false);
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to save socials.");
-    } finally {
-      setIsSaving(false);
+    setSaveError(null); setIsSaving(true);
+    try { await onSocialsChange(socialsValue); setEditingSocials(false); }
+    catch (err) { setSaveError(err instanceof Error ? err.message : "Failed to save socials."); }
+    finally { setIsSaving(false); }
+  };
+
+  const handleSaveContact = async () => {
+    if (!onContactChange) return;
+    if (contactValue.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactValue.email)) {
+      showContactError("Please enter a valid email address."); return;
     }
+    setContactSaveError(null); setIsSaving(true);
+    try { await onContactChange(contactValue); setEditingContact(null); }
+    catch (err) { showContactError(err instanceof Error ? err.message : "Failed to save."); }
+    finally { setIsSaving(false); }
   };
 
-  const handleCancelLocation = () => {
-    setLocationValue(location);
-    setEditingLocation(false);
+  const handleAcceptVisiting = async (visitingId: number) => {
+    if (!onAcceptVisiting) return;
+    await onAcceptVisiting(visitingId);
+    setVisitingsState((prev) => prev.filter((v) => v.visitingId !== visitingId));
+    showSuccessToast("Showing confirmed! A meeting has been scheduled.");
   };
 
-  const handleCancelSocials = () => {
-    setSocialsValue(socials);
-    setEditingSocials(false);
+  const handleDeclineVisiting = async (visitingId: number) => {
+    if (!onDeclineVisiting) return;
+    await onDeclineVisiting(visitingId);
+    setVisitingsState((prev) => prev.filter((v) => v.visitingId !== visitingId));
   };
+
+  const hasContactInfo = !!(contactValue.officePhone || contactValue.mobilePhone || contactValue.email);
+  const hasSocials = !!(socialsValue.facebook || socialsValue.linkedin || socialsValue.twitter);
 
   return (
     <div className="min-h-screen flex flex-col">
+
       {/* ── Cover + Avatar ── */}
       <section className="relative">
-        {/* Cover */}
         <div className="relative h-[33vh] overflow-hidden rounded-b-3xl bg-gray-200 group">
-          {coverSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={coverSrc} alt="Cover" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-slate-300 via-gray-200 to-slate-400" />
-          )}
-
-          {/* Cover upload overlay */}
+          {coverSrc
+            ? <img src={coverSrc} alt="Cover" className="w-full h-full object-cover" /> // eslint-disable-line @next/next/no-img-element
+            : <div className="w-full h-full bg-gradient-to-br from-slate-300 via-gray-200 to-slate-400" />}
           {onCoverChange && (
             <>
-              <div
-                className={[
-                  "absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-200",
-                  uploadingCover ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-                ].join(" ")}
-              >
-                {uploadingCover ? (
-                  <Loader2 className="w-7 h-7 text-white animate-spin" />
-                ) : (
-                  <button
-                    onClick={() => coverInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-sm font-medium transition-colors border border-white/30"
-                  >
-                    <Camera className="w-4 h-4" />
-                    Change cover
-                  </button>
-                )}
+              <div className={["absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-200", uploadingCover ? "opacity-100" : "opacity-0 group-hover:opacity-100"].join(" ")}>
+                {uploadingCover
+                  ? <Loader2 className="w-7 h-7 text-white animate-spin" />
+                  : <button onClick={() => coverInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-sm font-medium border border-white/30"><Camera className="w-4 h-4" />Change cover</button>}
               </div>
-              <input
-                ref={coverInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileSelect(file, "cover", onCoverChange);
-                  e.target.value = "";
-                }}
-              />
+              <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f, "cover", onCoverChange!); e.target.value = ""; }} />
             </>
           )}
         </div>
 
-        {/* Avatar — overlaps cover bottom-left */}
         <div className="absolute left-16 sm:left-24 bottom-0 translate-y-1/2 z-10">
           <div className="relative group/av">
-            {avatarSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarSrc}
-                alt={name}
-                className="w-36 h-36 sm:w-44 sm:h-44 rounded-full border-4 border-white object-cover shadow-md"
-              />
-            ) : (
-              <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full border-4 border-white bg-gray-300 shadow-md flex items-center justify-center">
-                <span className="text-5xl font-bold text-gray-500 select-none">
-                  {name.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
-
-            {/* Avatar upload overlay */}
+            {avatarSrc
+              ? <img src={avatarSrc} alt={name} className="w-36 h-36 sm:w-44 sm:h-44 rounded-full border-4 border-white object-cover shadow-md" /> // eslint-disable-line @next/next/no-img-element
+              : <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full border-4 border-white bg-gray-300 shadow-md flex items-center justify-center"><span className="text-5xl font-bold text-gray-500 select-none">{name.charAt(0).toUpperCase()}</span></div>}
             {onAvatarChange && (
               <>
-                <div
-                  className={[
-                    "absolute inset-0 rounded-full bg-black/40 flex items-center justify-center transition-opacity duration-200",
-                    uploadingAvatar ? "opacity-100" : "opacity-0 group-hover/av:opacity-100",
-                  ].join(" ")}
-                >
-                  {uploadingAvatar ? (
-                    <Loader2 className="w-6 h-6 text-white animate-spin" />
-                  ) : (
-                    <button
-                      onClick={() => avatarInputRef.current?.click()}
-                      aria-label="Change avatar"
-                      className="flex items-center justify-center w-full h-full"
-                    >
-                      <Camera className="w-6 h-6 text-white" />
-                    </button>
-                  )}
+                <div className={["absolute inset-0 rounded-full bg-black/40 flex items-center justify-center transition-opacity duration-200", uploadingAvatar ? "opacity-100" : "opacity-0 group-hover/av:opacity-100"].join(" ")}>
+                  {uploadingAvatar
+                    ? <Loader2 className="w-6 h-6 text-white animate-spin" />
+                    : <button onClick={() => avatarInputRef.current?.click()} aria-label="Change avatar" className="flex items-center justify-center w-full h-full"><Camera className="w-6 h-6 text-white" /></button>}
                 </div>
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelect(file, "avatar", onAvatarChange);
-                    e.target.value = "";
-                  }}
-                />
+                <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f, "avatar", onAvatarChange!); e.target.value = ""; }} />
               </>
             )}
           </div>
         </div>
       </section>
 
-      {/* Upload error toast */}
+      {/* ── Toasts ── */}
       {uploadError && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
           <div className="flex items-center gap-3 py-3 px-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm shadow-lg">
             <span className="flex-1">{uploadError}</span>
-            <button onClick={() => setUploadError(null)} aria-label="Dismiss">
-              <X className="w-4 h-4" />
-            </button>
+            <button onClick={() => setUploadError(null)}><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+      )}
+      {successToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+          <div className="flex items-center gap-3 py-3 px-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm shadow-lg">
+            <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+            <span className="flex-1">{successToast}</span>
+            <button onClick={() => setSuccessToast(null)}><X className="w-4 h-4" /></button>
           </div>
         </div>
       )}
 
-      {/* ── User info ── */}
-      <div className="max-w-6xl mx-auto w-full px-6 sm:px-10 pt-24 pb-24">
-        {/* ml offsets text past avatar: left(64/96px) + avatar(144/176px) + small gap */}
+      {/* ── User info header ── */}
+      <div className="max-w-6xl mx-auto w-full px-6 sm:px-10 pt-24 pb-8">
         <div className="ml-36 sm:ml-48">
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-br from-slate-900 via-slate-700 to-slate-500 bg-clip-text text-transparent leading-tight">
             {name}
           </h1>
 
-          {/* ── Info row: location + social links ── */}
-          <div className="mt-1.5 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-y-3 sm:gap-y-2 sm:gap-x-3">
+          {/* ── Info row: location · socials · contact ── */}
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
 
             {/* Location */}
             {editingLocation ? (
               <div className="flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
-                <input
-                  type="text"
-                  value={locationValue}
-                  onChange={(e) => setLocationValue(e.target.value)}
-                  placeholder="City, Country"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSaveLocation();
-                    if (e.key === "Escape") handleCancelLocation();
-                  }}
-                  className="text-sm border-b border-gray-300 focus:border-slate-800 outline-none bg-transparent w-36 pb-0.5 placeholder:text-gray-300"
-                />
-                <button
-                  onClick={handleSaveLocation}
-                  disabled={isSaving}
-                  aria-label="Save location"
-                  className="p-0.5 rounded text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 transition-colors"
-                >
+                <input type="text" value={locationValue} onChange={(e) => setLocationValue(e.target.value)}
+                  placeholder="City, Country" autoFocus
+                  onKeyDown={(e) => { if (e.key === "Enter") handleSaveLocation(); if (e.key === "Escape") { setLocationValue(location); setEditingLocation(false); } }}
+                  className="text-sm border-b border-gray-300 focus:border-slate-800 outline-none bg-transparent w-36 pb-0.5 placeholder:text-gray-300" />
+                <button onClick={handleSaveLocation} disabled={isSaving} className="p-0.5 rounded text-emerald-600 hover:bg-emerald-50 disabled:opacity-50">
                   {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                 </button>
-                <button
-                  onClick={handleCancelLocation}
-                  disabled={isSaving}
-                  aria-label="Cancel"
-                  className="p-0.5 rounded text-gray-400 hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                >
+                <button onClick={() => { setLocationValue(location); setEditingLocation(false); }} disabled={isSaving} className="p-0.5 rounded text-gray-400 hover:bg-gray-100 disabled:opacity-50">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 group/loc">
-                {locationValue ? (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationValue)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-gray-500 hover:text-blue-600 transition-colors"
-                  >
-                    <MapPin className="w-5 h-5 sm:w-[18px] sm:h-[18px] shrink-0" />
-                    <span className="text-base sm:text-base font-medium">{locationValue}</span>
-                  </a>
-                ) : (
-                  <>
-                    <MapPin className="w-[18px] h-[18px] text-gray-400 shrink-0" />
-                    <span className="text-base font-medium text-gray-500">
-                      {isOwnProfile && <span className="text-gray-300 italic font-normal">Add location</span>}
-                    </span>
-                  </>
-                )}
-                {isOwnProfile && (
-                  <button
-                    onClick={() => setEditingLocation(true)}
-                    aria-label="Edit location"
-                    className="opacity-0 group-hover/loc:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100 ml-0.5"
-                  >
+              <div className="flex items-center gap-1 group/loc">
+                {locationValue
+                  ? <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationValue)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-gray-500 hover:text-blue-600 transition-colors text-sm font-medium">
+                      <MapPin className="w-4 h-4 shrink-0" />{locationValue}
+                    </a>
+                  : isOwnProfile && <button onClick={() => setEditingLocation(true)} className="flex items-center gap-1 text-sm text-gray-300 italic hover:text-gray-500 transition-colors"><MapPin className="w-4 h-4" />Add location</button>}
+                {isOwnProfile && locationValue && (
+                  <button onClick={() => setEditingLocation(true)} aria-label="Edit location" className="opacity-0 group-hover/loc:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100 ml-0.5">
                     <PenLine className="w-3.5 h-3.5 text-gray-400" />
                   </button>
                 )}
               </div>
             )}
 
-            {/* Separator — hidden on mobile */}
-            {!editingLocation && !editingSocials && (locationValue || isOwnProfile) && (
-              <span className="hidden sm:inline text-gray-300 select-none text-base font-light">·</span>
+            {/* Dot separators + socials */}
+            {!editingLocation && !editingSocials && (locationValue || isOwnProfile) && (hasSocials || isOwnProfile) && (
+              <span className="hidden sm:inline text-gray-300 select-none font-light">·</span>
             )}
 
-            {/* Social links — display */}
             {!editingSocials ? (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 group/soc">
+              <div className="flex items-center gap-3 group/soc">
                 {socialsValue.facebook && (
-                  <a
-                    href={toAbsoluteUrl(socialsValue.facebook)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-blue-600 hover:text-blue-500 transition-colors"
-                  >
-                    <FacebookSvg />
-                    <span className="text-base font-medium">Facebook</span>
+                  <a href={toAbsoluteUrl(socialsValue.facebook)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-blue-600 hover:text-blue-500 transition-colors text-sm font-medium">
+                    <FacebookSvg />Facebook
                   </a>
                 )}
                 {socialsValue.linkedin && (
-                  <a
-                    href={toAbsoluteUrl(socialsValue.linkedin)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-blue-700 hover:text-blue-600 transition-colors"
-                  >
-                    <LinkedInSvg />
-                    <span className="text-base font-medium">LinkedIn</span>
+                  <a href={toAbsoluteUrl(socialsValue.linkedin)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-blue-700 hover:text-blue-600 transition-colors text-sm font-medium">
+                    <LinkedInSvg />LinkedIn
                   </a>
                 )}
                 {socialsValue.twitter && (
-                  <a
-                    href={toAbsoluteUrl(socialsValue.twitter)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors"
-                  >
-                    <TwitterSvg />
-                    <span className="text-base font-medium">Twitter</span>
+                  <a href={toAbsoluteUrl(socialsValue.twitter)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-gray-700 hover:text-gray-900 transition-colors text-sm font-medium">
+                    <TwitterSvg />Twitter
                   </a>
                 )}
-                {isOwnProfile && (socialsValue.facebook || socialsValue.linkedin || socialsValue.twitter) && (
-                  <button
-                    onClick={() => setEditingSocials(true)}
-                    aria-label="Edit social links"
-                    className="opacity-0 group-hover/soc:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100 ml-0.5"
-                  >
+                {isOwnProfile && hasSocials && (
+                  <button onClick={() => setEditingSocials(true)} aria-label="Edit social links" className="opacity-0 group-hover/soc:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100">
                     <PenLine className="w-3.5 h-3.5 text-gray-400" />
                   </button>
                 )}
-                {isOwnProfile && !socialsValue.facebook && !socialsValue.linkedin && !socialsValue.twitter && (
-                  <button
-                    onClick={() => setEditingSocials(true)}
-                    className="flex items-center gap-1.5 text-base text-gray-300 italic hover:text-gray-500 font-medium transition-colors"
-                  >
-                    <PenLine className="w-3.5 h-3.5" />
-                    Add social links
+                {isOwnProfile && !hasSocials && (
+                  <button onClick={() => setEditingSocials(true)} className="flex items-center gap-1 text-sm text-gray-300 italic hover:text-gray-500 transition-colors">
+                    <PenLine className="w-3.5 h-3.5" />Add social links
                   </button>
                 )}
               </div>
             ) : (
-              /* Social links — edit form (expands full width below) */
-              <div className="w-full mt-1 flex flex-col gap-2">
-                {(
-                  [
-                    { key: "facebook", Svg: FacebookSvg, placeholder: "Facebook URL" },
-                    { key: "linkedin", Svg: LinkedInSvg, placeholder: "LinkedIn URL" },
-                    { key: "twitter",  Svg: TwitterSvg,  placeholder: "Twitter / X URL" },
-                  ] as const
-                ).map(({ key, Svg, placeholder }) => (
-                  <div key={key} className="flex items-center gap-2 max-w-sm">
-                    <Svg />
-                    <input
-                      type="text"
-                      value={socialsValue[key] || ""}
-                      onChange={(e) => setSocialsValue({ ...socialsValue, [key]: e.target.value })}
-                      placeholder={placeholder}
-                      className="flex-1 px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-800 bg-white"
-                    />
-                  </div>
-                ))}
-                {saveError && <p className="text-xs text-red-500">{saveError}</p>}
-                <div className="flex gap-2 mt-0.5">
-                  <button
-                    onClick={handleSaveSocials}
-                    disabled={isSaving}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 transition-colors"
-                  >
-                    {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                    Save
+              /* Socials edit — full-width below (rendered outside the flex row below) */
+              null
+            )}
+
+            {/* Separator before contact */}
+            {!editingLocation && !editingSocials && editingContact === null && (hasContactInfo || isOwnProfile) && (hasSocials || locationValue) && (
+              <span className="hidden sm:inline text-gray-300 select-none font-light">·</span>
+            )}
+
+            {/* Contact info inline */}
+            {editingContact === null && (
+              <div className="flex flex-wrap items-center gap-3 group/contact">
+                {contactValue.officePhone && (
+                  <a href={`tel:${contactValue.officePhone}`} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors">
+                    <Phone className="w-3.5 h-3.5 shrink-0 text-gray-400" />{contactValue.officePhone}
+                    <span className="text-gray-400 text-xs">(Office)</span>
+                  </a>
+                )}
+                {contactValue.mobilePhone && (
+                  <a href={`tel:${contactValue.mobilePhone}`} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors">
+                    <Phone className="w-3.5 h-3.5 shrink-0 text-gray-400" />{contactValue.mobilePhone}
+                    <span className="text-gray-400 text-xs">(Mobile)</span>
+                  </a>
+                )}
+                {contactValue.email && (
+                  <a href={`mailto:${contactValue.email}`} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors break-all">
+                    <Mail className="w-3.5 h-3.5 shrink-0 text-gray-400" />{contactValue.email}
+                  </a>
+                )}
+                {isOwnProfile && hasContactInfo && (
+                  <button onClick={() => setEditingContact("officePhone")} aria-label="Edit contact" className="opacity-0 group-hover/contact:opacity-100 transition-opacity p-0.5 rounded hover:bg-gray-100">
+                    <PenLine className="w-3.5 h-3.5 text-gray-400" />
                   </button>
-                  <button
-                    onClick={handleCancelSocials}
-                    disabled={isSaving}
-                    className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
-                  >
-                    Cancel
+                )}
+                {isOwnProfile && !hasContactInfo && (
+                  <button onClick={() => setEditingContact("officePhone")} className="flex items-center gap-1 text-sm text-gray-300 italic hover:text-gray-500 transition-colors">
+                    <PenLine className="w-3.5 h-3.5" />Add contact info
                   </button>
-                </div>
+                )}
               </div>
             )}
           </div>
 
           {/* Location save error */}
-          {saveError && editingLocation && (
-            <p className="text-xs text-red-500 mt-1">{saveError}</p>
-          )}
-        </div>
-      </div>
+          {saveError && editingLocation && <p className="text-xs text-red-500 mt-1">{saveError}</p>}
 
-      {/* ── Contact + Properties ── */}
-      <div className="mt-3 flex-1 bg-gray-50">
-        <div className="max-w-6xl mx-auto w-full py-12 px-6 sm:px-10 flex flex-col md:flex-row gap-6 md:gap-8 items-start">
-        {/* Left: Contact info */}
-        <div className="w-full md:w-72 shrink-0 flex flex-col gap-1">
-          {editingContact !== null ? (
-            <div className="flex flex-col gap-3 bg-white/70 rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-slate-500 shrink-0" />
-                <div className="flex flex-col gap-1 flex-1">
-                  <input
-                    ref={officePhoneRef}
-                    type="tel"
-                    value={contactValue.officePhone}
-                    onChange={(e) => setContactValue({ ...contactValue, officePhone: e.target.value })}
-                    placeholder="Office phone"
-                    className="text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white"
-                  />
-                  <input
-                    ref={mobilePhoneRef}
-                    type="tel"
-                    value={contactValue.mobilePhone}
-                    onChange={(e) => setContactValue({ ...contactValue, mobilePhone: e.target.value })}
-                    placeholder="Mobile phone"
-                    className="text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white"
-                  />
+          {/* Socials edit form — expanded below info row */}
+          {editingSocials && (
+            <div className="mt-3 flex flex-col gap-2 max-w-sm">
+              {([
+                { key: "facebook", Svg: FacebookSvg, placeholder: "Facebook URL" },
+                { key: "linkedin", Svg: LinkedInSvg, placeholder: "LinkedIn URL" },
+                { key: "twitter",  Svg: TwitterSvg,  placeholder: "Twitter / X URL" },
+              ] as const).map(({ key, Svg, placeholder }) => (
+                <div key={key} className="flex items-center gap-2">
+                  <Svg />
+                  <input type="text" value={socialsValue[key] || ""} onChange={(e) => setSocialsValue({ ...socialsValue, [key]: e.target.value })}
+                    placeholder={placeholder} className="flex-1 px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-800 bg-white" />
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-slate-500 shrink-0" />
-                <input
-                  ref={contactEmailRef}
-                  type="email"
-                  value={contactValue.email}
-                  onChange={(e) => setContactValue({ ...contactValue, email: e.target.value })}
-                  placeholder="Email address"
-                  className="text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white flex-1"
-                />
-              </div>
-              {contactSaveError && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs font-medium animate-in fade-in slide-in-from-top-1 duration-200">
-                  <X className="w-3.5 h-3.5 shrink-0" />
-                  {contactSaveError}
-                </div>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSaveContact}
-                  disabled={isSaving}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-slate-800 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 transition-colors"
-                >
-                  {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <Check className="w-3.5 h-3.5" />
-                  Save
+              ))}
+              {saveError && <p className="text-xs text-red-500">{saveError}</p>}
+              <div className="flex gap-2 mt-0.5">
+                <button onClick={handleSaveSocials} disabled={isSaving} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50">
+                  {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}Save
                 </button>
-                <button
-                  onClick={() => { setContactValue({ officePhone: phone.office, mobilePhone: phone.mobile, email }); setEditingContact(null); }}
-                  disabled={isSaving}
-                  className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-white rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                >
+                <button onClick={() => { setSocialsValue(socials); setEditingSocials(false); }} disabled={isSaving} className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50">
                   Cancel
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="flex flex-col gap-4 group/contact">
-              {contactValue.officePhone && (
-                <div className="flex items-center gap-3 group/row">
-                  <Phone className="w-5 h-5 text-slate-500 shrink-0" />
-                  <a href={`tel:${contactValue.officePhone}`} className="text-base text-slate-700 hover:text-slate-900 transition-colors">
-                    {contactValue.officePhone}
-                    <span className="text-slate-400 ml-2">(Office)</span>
-                  </a>
-                  {isOwnProfile && (
-                    <button onClick={() => setEditingContact("officePhone")} className="opacity-0 group-hover/row:opacity-100 transition-opacity ml-0.5">
-                      <PenLine className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
-                    </button>
-                  )}
+          )}
+
+          {/* Contact edit form — expanded below info row */}
+          {editingContact !== null && (
+            <div className="mt-3 flex flex-col gap-3 bg-white/80 rounded-2xl p-4 shadow-sm max-w-sm border border-gray-100">
+              <div className="flex items-start gap-2">
+                <Phone className="w-4 h-4 text-slate-500 shrink-0 mt-2" />
+                <div className="flex flex-col gap-1 flex-1">
+                  <input ref={officePhoneRef} type="tel" value={contactValue.officePhone}
+                    onChange={(e) => setContactValue({ ...contactValue, officePhone: e.target.value })}
+                    placeholder="Office phone" className="text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white" />
+                  <input ref={mobilePhoneRef} type="tel" value={contactValue.mobilePhone}
+                    onChange={(e) => setContactValue({ ...contactValue, mobilePhone: e.target.value })}
+                    placeholder="Mobile phone" className="text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-slate-500 shrink-0" />
+                <input ref={contactEmailRef} type="email" value={contactValue.email}
+                  onChange={(e) => setContactValue({ ...contactValue, email: e.target.value })}
+                  placeholder="Email address" className="flex-1 text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white" />
+              </div>
+              {contactSaveError && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-xs font-medium">
+                  <X className="w-3.5 h-3.5 shrink-0" />{contactSaveError}
                 </div>
               )}
-              {contactValue.mobilePhone && (
-                <div className="flex items-center gap-3 group/row2">
-                  <Phone className="w-5 h-5 text-slate-500 shrink-0" />
-                  <a href={`tel:${contactValue.mobilePhone}`} className="text-base text-slate-700 hover:text-slate-900 transition-colors">
-                    {contactValue.mobilePhone}
-                    <span className="text-slate-400 ml-2">(Mobile)</span>
-                  </a>
-                  {isOwnProfile && (
-                    <button onClick={() => setEditingContact("mobilePhone")} className="opacity-0 group-hover/row2:opacity-100 transition-opacity ml-0.5">
-                      <PenLine className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
-                    </button>
-                  )}
-                </div>
-              )}
-              {contactValue.email && (
-                <div className="flex items-center gap-3 group/row3">
-                  <Mail className="w-5 h-5 text-slate-500 shrink-0" />
-                  <a href={`mailto:${contactValue.email}`} className="text-base text-slate-700 hover:text-slate-900 transition-colors break-all">
-                    {contactValue.email}
-                  </a>
-                  {isOwnProfile && (
-                    <button onClick={() => setEditingContact("email")} className="opacity-0 group-hover/row3:opacity-100 transition-opacity ml-0.5">
-                      <PenLine className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
-                    </button>
-                  )}
-                </div>
-              )}
-              {isOwnProfile && !contactValue.officePhone && !contactValue.mobilePhone && !contactValue.email && (
-                <button
-                  onClick={() => setEditingContact("officePhone")}
-                  className="flex items-center gap-1.5 text-base text-slate-400 italic hover:text-slate-600 transition-colors"
-                >
-                  <PenLine className="w-4 h-4" />
-                  Add contact info
+              <div className="flex gap-2">
+                <button onClick={handleSaveContact} disabled={isSaving} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-slate-800 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50">
+                  {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}<Check className="w-3.5 h-3.5" />Save
                 </button>
-              )}
+                <button onClick={() => { setContactValue({ officePhone: phone.office, mobilePhone: phone.mobile, email }); setEditingContact(null); }} disabled={isSaving}
+                  className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-white rounded-lg hover:bg-gray-100 disabled:opacity-50 border border-gray-200">
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>
+      </div>
 
-        {/* Right: showings + agent listings */}
-        <div className="flex-1 min-w-0 flex flex-col gap-6">
+      {/* ── Cards section — full screen width ── */}
+      <div className="flex-1 bg-gray-50 py-10">
 
-          {/* Tab switcher — only for agents */}
-          {isAgent && (
-            <div className="inline-flex items-center bg-gray-100 rounded-xl p-1 w-fit">
-              <button
-                onClick={() => setActiveTab("showings")}
-                className={[
-                  "px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
-                  activeTab === "showings"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700",
-                ].join(" ")}
-              >
-                Requested Showings
-                {visitings.length > 0 && (
-                  <span className={[
-                    "ml-2 px-1.5 py-0.5 rounded-full text-xs font-bold",
-                    activeTab === "showings" ? "bg-gray-900 text-white" : "bg-gray-300 text-gray-600",
-                  ].join(" ")}>
-                    {visitings.length}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setActiveTab("listings")}
-                className={[
-                  "px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
-                  activeTab === "listings"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700",
-                ].join(" ")}
-              >
-                My Listings
-                {listings.length > 0 && (
-                  <span className={[
-                    "ml-2 px-1.5 py-0.5 rounded-full text-xs font-bold",
-                    activeTab === "listings" ? "bg-gray-900 text-white" : "bg-gray-300 text-gray-600",
-                  ].join(" ")}>
-                    {listings.length}
-                  </span>
-                )}
-              </button>
+        {/* Tab switcher — agents only */}
+        {isAgent && (
+          <div className="flex justify-center mb-8 px-6">
+            <div className="inline-flex items-center bg-gray-100 rounded-2xl p-1.5 gap-1">
+              {(["showings", "listings", "meetings"] as const).map((tab) => {
+                const labels = { showings: "Requested Showings", listings: "My Listings", meetings: "Meetings" };
+                const counts = { showings: visitingsState.length, listings: listings.length, meetings: meetings.length };
+                return (
+                  <button key={tab} onClick={() => setActiveTab(tab)}
+                    className={["px-6 py-2.5 rounded-xl text-base font-semibold transition-all duration-200", activeTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"].join(" ")}>
+                    {labels[tab]}
+                    {counts[tab] > 0 && (
+                      <span className={["ml-2 px-1.5 py-0.5 rounded-full text-xs font-bold", activeTab === tab ? "bg-gray-900 text-white" : "bg-gray-300 text-gray-600"].join(" ")}>
+                        {counts[tab]}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Requested Showings panel */}
-          {(!isAgent || activeTab === "showings") && (
-            <div>
-              {!isAgent && (
-                <h2 className="text-base font-semibold text-gray-700 mb-4">Requested Showings</h2>
-              )}
-              {visitings.length === 0 ? (
-                <p className="text-sm text-gray-400 py-6">No showings requested yet.</p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                  {visitings.map((v) => (
-                    <VisitingPropertyCard key={v.visitingId} visiting={v} />
+        {/* User-role "Requested Showings" heading — centered, big */}
+        {!isAgent && (
+          <h2 className="text-center text-3xl sm:text-4xl font-bold text-gray-800 mb-8 px-6">
+            Requested Showings
+          </h2>
+        )}
+
+        {/* ── Showings carousel ── */}
+        {(!isAgent || activeTab === "showings") && (
+          visitingsState.length === 0
+            ? <p className="px-6 sm:px-10 text-sm text-gray-400">No showings requested yet.</p>
+            : (
+              <div className="relative">
+                {canScrollLeft && (
+                  <button onClick={scrollCarouselLeft}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                    <ChevronLeft className="w-5 h-5 text-gray-700" />
+                  </button>
+                )}
+                <div ref={carouselRef} onScroll={checkScroll}
+                  className="flex justify-center gap-5 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-6 sm:px-10 pb-4">
+                  {visitingsState.map((v) => (
+                    <div key={v.visitingId} className="w-80 shrink-0">
+                      <VisitingPropertyCard
+                        visiting={v}
+                        showActions={isAgent}
+                        onAccept={isAgent && onAcceptVisiting ? () => handleAcceptVisiting(v.visitingId) : undefined}
+                        onDecline={isAgent && onDeclineVisiting ? () => handleDeclineVisiting(v.visitingId) : undefined}
+                      />
+                    </div>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
+                {canScrollRight && (
+                  <button onClick={scrollCarouselRight}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                    <ChevronRight className="w-5 h-5 text-gray-700" />
+                  </button>
+                )}
+              </div>
+            )
+        )}
 
-          {/* My Listings panel */}
-          {isAgent && activeTab === "listings" && (
-            <div>
-              {listings.length === 0 ? (
-                <p className="text-sm text-gray-400 py-6">No listings yet.</p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+        {/* ── Listings carousel ── */}
+        {isAgent && activeTab === "listings" && (
+          listings.length === 0
+            ? <p className="px-6 sm:px-10 text-sm text-gray-400">No listings yet.</p>
+            : (
+              <div className="relative">
+                {canScrollLeft && (
+                  <button onClick={scrollCarouselLeft}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                    <ChevronLeft className="w-5 h-5 text-gray-700" />
+                  </button>
+                )}
+                <div ref={carouselRef} onScroll={checkScroll}
+                  className="flex justify-center gap-5 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-6 sm:px-10 pb-4">
                   {listings.map((listing) => (
-                    <PropertyCard key={listing.id} property={listing} coverImage={listing.coverImage} />
+                    <div key={listing.id} className="w-80 shrink-0">
+                      <PropertyCard property={listing} coverImage={listing.coverImage} />
+                    </div>
                   ))}
                 </div>
+                {canScrollRight && (
+                  <button onClick={scrollCarouselRight}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                    <ChevronRight className="w-5 h-5 text-gray-700" />
+                  </button>
+                )}
+              </div>
+            )
+        )}
+
+        {/* ── Meetings list ── */}
+        {isAgent && activeTab === "meetings" && (
+          <div className="px-6 sm:px-10">
+            {meetings.length === 0
+              ? <p className="text-sm text-gray-400">No meetings yet.</p>
+              : (
+                <div className="rounded-xl border border-gray-100 bg-white overflow-hidden">
+                  {meetings.map((meeting) => {
+                    const d = new Date(meeting.meetingDate);
+                    const dateLabel = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+                    const timeLabel = formatHour(d.getHours());
+                    return (
+                      <div key={meeting.id} className="flex flex-row flex-wrap items-center gap-x-6 gap-y-1 px-5 py-4 border-b border-gray-100 last:border-b-0">
+                        <span className="text-sm font-semibold text-indigo-600 whitespace-nowrap min-w-[150px]">
+                          {dateLabel} · {timeLabel}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800 min-w-[100px]">
+                          <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />{meeting.requesterUsername}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-sm text-gray-500 flex-1 min-w-[140px]">
+                          <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />{meeting.propertyAddress}
+                        </span>
+                        {meeting.requesterPhone && (
+                          <span className="flex items-center gap-1.5 text-sm text-gray-500 whitespace-nowrap">
+                            <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />{meeting.requesterPhone}
+                          </span>
+                        )}
+                        {meeting.requesterEmail && (
+                          <span className="flex items-center gap-1.5 text-sm text-gray-500 whitespace-nowrap">
+                            <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />{meeting.requesterEmail}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-            </div>
-          )}
-        </div>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

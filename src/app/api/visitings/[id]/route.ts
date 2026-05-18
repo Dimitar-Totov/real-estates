@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/jwt";
 import { db } from "@/db";
-import { propertyVisitings, agents, properties } from "@/db/schema";
+import {
+  propertyVisitings,
+  agents,
+  properties,
+  meetings,
+  users,
+  profiles,
+  messages,
+} from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
 export async function PATCH(
@@ -31,7 +39,6 @@ export async function PATCH(
     return NextResponse.json({ error: "status must be confirmed or cancelled" }, { status: 400 });
   }
 
-  // Verify that this visiting belongs to a property listed by the current agent
   const [agent] = await db
     .select({ id: agents.id })
     .from(agents)
@@ -41,7 +48,11 @@ export async function PATCH(
   if (!agent) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const [visiting] = await db
-    .select({ id: propertyVisitings.id, propertyId: propertyVisitings.propertyId })
+    .select({
+      id: propertyVisitings.id,
+      propertyId: propertyVisitings.propertyId,
+      messageId: propertyVisitings.messageId,
+    })
     .from(propertyVisitings)
     .where(eq(propertyVisitings.id, visitingId))
     .limit(1);
@@ -54,8 +65,55 @@ export async function PATCH(
     .where(eq(properties.id, visiting.propertyId))
     .limit(1);
 
-  if (!property || property.listedByAgentId !== agent.id) {
+  // Check message-based ownership (Strategy B visitings)
+  let hasMessageOwnership = false;
+  if (visiting.messageId) {
+    const [msg] = await db
+      .select({ id: messages.id })
+      .from(messages)
+      .where(and(eq(messages.id, visiting.messageId), eq(messages.receiverId, payload.id)))
+      .limit(1);
+    hasMessageOwnership = !!msg;
+  }
+
+  if (!property || (property.listedByAgentId !== agent.id && !hasMessageOwnership)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (status === "confirmed") {
+    const [info] = await db
+      .select({
+        visitDate: propertyVisitings.visitDate,
+        hour: propertyVisitings.hour,
+        requesterUsername: users.username,
+        requesterEmail: users.email,
+        propertyTitle: properties.title,
+        propertyAddress: properties.address,
+        mobilePhone: profiles.mobilePhone,
+        officePhone: profiles.officePhone,
+        contactEmail: profiles.contactEmail,
+      })
+      .from(propertyVisitings)
+      .innerJoin(properties, eq(propertyVisitings.propertyId, properties.id))
+      .innerJoin(users, eq(propertyVisitings.userId, users.id))
+      .leftJoin(profiles, eq(profiles.userId, propertyVisitings.userId))
+      .where(eq(propertyVisitings.id, visitingId))
+      .limit(1);
+
+    if (info) {
+      const meetingDate = new Date(info.visitDate);
+      meetingDate.setHours(info.hour, 0, 0, 0);
+
+      await db.insert(meetings).values({
+        agentId: agent.id,
+        meetingDate,
+        propertyTitle: info.propertyTitle,
+        propertyAddress: info.propertyAddress,
+        requesterUsername: info.requesterUsername,
+        requesterPhone: info.mobilePhone ?? info.officePhone,
+        requesterEmail: info.contactEmail ?? info.requesterEmail,
+      });
+    }
   }
 
   const [updated] = await db

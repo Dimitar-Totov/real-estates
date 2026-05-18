@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import ProfilePage from "@/components/ProfilePage";
 import AdminPanel from "@/components/AdminPanel";
 import { type VisitingRow } from "@/components/VisitingPropertyCard";
-import { type Property } from "@/db/schema";
+import { type Property, type Meeting } from "@/db/schema";
 
 type UserProfile = {
   id: number;
@@ -29,6 +29,7 @@ export default function ProfileRoute() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [visitings, setVisitings] = useState<VisitingRow[]>([]);
   const [listings, setListings] = useState<ListingRow[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
 
   useEffect(() => {
     fetch("/api/user/me")
@@ -44,6 +45,11 @@ export default function ProfileRoute() {
     fetch("/api/properties/my")
       .then((r) => (r.ok ? r.json() : []))
       .then(setListings)
+      .catch(() => {});
+
+    fetch("/api/meetings/my")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setMeetings)
       .catch(() => {});
   }, [router]);
 
@@ -108,6 +114,35 @@ export default function ProfileRoute() {
     setProfile(await res.json());
   };
 
+  const handleAcceptVisiting = async (visitingId: number) => {
+    const res = await fetch(`/api/visitings/${visitingId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "confirmed" }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error((data as { error?: string }).error ?? "Failed to confirm the showing.");
+    }
+    // Refresh meetings list after a new one is created
+    fetch("/api/meetings/my")
+      .then((r) => (r.ok ? r.json() : meetings))
+      .then(setMeetings)
+      .catch(() => {});
+  };
+
+  const handleDeclineVisiting = async (visitingId: number) => {
+    const res = await fetch(`/api/visitings/${visitingId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error((data as { error?: string }).error ?? "Failed to decline the showing.");
+    }
+  };
+
   if (!profile) return null;
 
   if (profile.role === "admin") return <AdminPanel />;
@@ -129,12 +164,15 @@ export default function ProfileRoute() {
         email={profile.contactEmail ?? ""}
         visitings={visitings}
         listings={listings}
+        meetings={meetings}
         onAvatarChange={makeUploadHandler("avatar")}
         onCoverChange={makeUploadHandler("cover")}
         isOwnProfile={true}
         onLocationChange={handleLocationChange}
         onSocialsChange={handleSocialsChange}
         onContactChange={handleContactChange}
+        onAcceptVisiting={handleAcceptVisiting}
+        onDeclineVisiting={handleDeclineVisiting}
       />
     </>
   );
