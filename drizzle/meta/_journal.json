@@ -99,6 +99,13 @@
       "when": 1779101478084,
       "tag": "0013_nervous_pyro",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1779185931124,
+      "tag": "0014_stiff_scarecrow",
+      "breakpoints": true
     }
   ]
 }

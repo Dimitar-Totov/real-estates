@@ -204,3 +204,15 @@ export const meetings = pgTable("meetings", {
 
 export type Meeting = typeof meetings.$inferSelect;
 export type NewMeeting = typeof meetings.$inferInsert;
+
+export const agentRatings = pgTable("agent_ratings", {
+  id:        serial("id").primaryKey(),
+  agentId:   integer("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+  userId:    integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  rating:    integer("rating").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type AgentRating = typeof agentRatings.$inferSelect;
+export type NewAgentRating = typeof agentRatings.$inferInsert;

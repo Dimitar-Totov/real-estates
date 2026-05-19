@@ -82,7 +82,7 @@ const NAV_LINKS: NavLinkDef[] = [
     featured: { label: "Find an Agent", href: "/agents/search", icon: icons.search, description: "Search by name, specialty or city" },
     items: [
       { label: "Top-Rated",       href: "/agents?sort=rating",   icon: icons.star,    description: "Highest reviewed" },
-      { label: "New Agents",      href: "/agents?sort=newest",   icon: icons.newUser, description: "Recently joined" },
+      { label: "New Agents",      href: "/agents/new",           icon: icons.newUser, description: "Recently joined" },
       { label: "Featured Agents", href: "/agents?featured=true", icon: icons.badge,   description: "Editor's picks" },
     ],
   },
