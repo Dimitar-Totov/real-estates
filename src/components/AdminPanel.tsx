@@ -178,15 +178,25 @@ function StatCard({ label, value, bg }: { label: string; value: number; bg: stri
 
 // ── AdminPanel ────────────────────────────────────────────────────────────────
 
+type DashboardStats = { properties: number; agents: number; users: number };
+
 export default function AdminPanel() {
   const [tab,    setTab]    = useState<"dashboard" | "user-management">("dashboard");
   const [show,   setShow]   = useState(false);
   const [period, setPeriod] = useState<"lifetime" | "monthly">("lifetime");
   const [search, setSearch] = useState("");
+  const [stats,  setStats]  = useState<DashboardStats | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setShow(true), 80);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/stats")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data) setStats(data); })
+      .catch(() => {});
   }, []);
 
   const fadeSlide = (delay: number) => ({
@@ -234,9 +244,9 @@ export default function AdminPanel() {
 
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
           <div className="flex gap-2 sm:gap-3">
-            <StatCard label="Properties" value={284} bg={ORANGE} />
-            <StatCard label="Tasks"      value={156} bg={NAVY}   />
-            <StatCard label="Members"    value={47}  bg={TEAL}   />
+            <StatCard label="Properties" value={stats?.properties ?? 0} bg={ORANGE} />
+            <StatCard label="Agents"     value={stats?.agents     ?? 0} bg={NAVY}   />
+            <StatCard label="Users"      value={stats?.users      ?? 0} bg={TEAL}   />
           </div>
           <button
             className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl text-white text-sm font-semibold shadow-md hover:shadow-lg hover:brightness-110 active:scale-95 transition-all duration-200 whitespace-nowrap"
