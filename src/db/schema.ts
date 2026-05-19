@@ -216,3 +216,20 @@ export const agentRatings = pgTable("agent_ratings", {
 
 export type AgentRating = typeof agentRatings.$inferSelect;
 export type NewAgentRating = typeof agentRatings.$inferInsert;
+
+export const feedItemTypeEnum = pgEnum("feed_item_type", [
+  "listing",
+  "agent_activity",
+  "review",
+  "market_update",
+]);
+
+export const feedItems = pgTable("feed_items", {
+  id:        serial("id").primaryKey(),
+  type:      feedItemTypeEnum("type").notNull(),
+  content:   jsonb("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type FeedItem = typeof feedItems.$inferSelect;
+export type NewFeedItem = typeof feedItems.$inferInsert;

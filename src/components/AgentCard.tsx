@@ -17,25 +17,171 @@ interface Agent {
   email: string;
 }
 
+/* ── Static star display ─────────────────────────────────────── */
+function RatingStars({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 6 }, (_, i) => {
+        const fill = Math.min(Math.max(rating - i, 0), 1); // 0, partial, or 1
+        return (
+          <svg
+            key={i}
+            viewBox="0 0 24 24"
+            className="w-3.5 h-3.5"
+            style={{ flexShrink: 0 }}
+          >
+            <defs>
+              <linearGradient id={`star-fill-${i}-${rating}`} x1="0" x2="1" y1="0" y2="0">
+                <stop offset={`${fill * 100}%`} stopColor="#facc15" />
+                <stop offset={`${fill * 100}%`} stopColor="transparent" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+              fill={fill > 0 ? `url(#star-fill-${i}-${rating})` : "none"}
+              stroke="#d1d5db"
+              strokeWidth={1.5}
+            />
+            {fill > 0 && (
+              <path
+                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                fill="none"
+                stroke="#facc15"
+                strokeWidth={1.5}
+              />
+            )}
+          </svg>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Star rating widget ──────────────────────────────────────── */
+function StarRating({
+  agentId,
+  initialRating,
+  onRated,
+}: {
+  agentId: string;
+  initialRating: number | null;
+  onRated: (rating: number, reviews: number) => void;
+}) {
+  const [hovered, setHovered]   = useState<number | null>(null);
+  const [selected, setSelected] = useState<number | null>(initialRating);
+  const [loading, setLoading]   = useState(false);
+
+  // Keep selected in sync when initialRating arrives after mount
+  if (selected === null && initialRating !== null) {
+    setSelected(initialRating);
+  }
+
+  const alreadyRated = selected !== null;
+  const display = hovered ?? 0;
+
+  const submit = async (star: number) => {
+    if (loading || alreadyRated) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/agents/${agentId}/rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating: star }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSelected(star);
+        onRated(data.rating, data.reviews);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="pt-2">
+      {alreadyRated ? (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">Your rating:</span>
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: 6 }, (_, i) => i + 1).map((star) => (
+              <svg
+                key={star}
+                viewBox="0 0 24 24"
+                className="w-4 h-4"
+                fill={star <= selected ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth={1.5}
+                style={{ color: star <= selected ? "#facc15" : "#d1d5db" }}
+              >
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            ))}
+          </div>
+          <span className="text-xs text-yellow-500 font-medium">{selected}/6</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">Rate:</span>
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: 6 }, (_, i) => i + 1).map((star) => (
+              <button
+                key={star}
+                disabled={loading}
+                onClick={() => submit(star)}
+                onMouseEnter={() => setHovered(star)}
+                onMouseLeave={() => setHovered(null)}
+                className="focus:outline-none disabled:opacity-50 transition-transform hover:scale-110 active:scale-95"
+                aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-4 h-4 transition-colors duration-100"
+                  fill={star <= display ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  style={{ color: star <= display ? "#facc15" : "#d1d5db" }}
+                >
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Main card ───────────────────────────────────────────────── */
 export default function AgentCard({
-  agent,
+  agent: initialAgent,
   isAdmin = false,
   isOwnCard = false,
+  canRate = false,
+  myRating = null,
   onDelete,
   onEmail,
 }: {
   agent: Agent;
   isAdmin?: boolean;
   isOwnCard?: boolean;
+  canRate?: boolean;
+  myRating?: number | null;
   onDelete?: (id: string) => void;
   onEmail?: () => void;
 }) {
+  const [agent, setAgent]       = useState(initialAgent);
   const [confirming, setConfirming] = useState(false);
   const [removing, setRemoving] = useState(false);
 
   const handleDelete = () => {
     setRemoving(true);
     setTimeout(() => onDelete?.(agent.id), 350);
+  };
+
+  const handleRated = (newRating: number, newReviews: number) => {
+    setAgent((prev) => ({ ...prev, rating: newRating, reviews: newReviews }));
   };
 
   if (removing) {
@@ -71,10 +217,7 @@ export default function AgentCard({
 
         {/* Rating Badge */}
         <div className="absolute top-3 right-3 bg-white dark:bg-gray-800 rounded-full px-2 py-1 flex items-center gap-1 shadow-md">
-          <svg
-            className="w-4 h-4 text-yellow-400 fill-current"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 24 24">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
           </svg>
           <span className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -93,67 +236,38 @@ export default function AgentCard({
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {agent.specialty}
             </p>
+            <div className="flex items-center gap-2 mt-1.5">
+              <RatingStars rating={agent.rating} />
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {agent.rating.toFixed(1)}/6
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-              />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             {agent.city}
           </div>
 
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {agent.experience} years exp.
             </div>
             <div className="text-gray-600 dark:text-gray-400">
-              {agent.reviews} reviews
+              {agent.reviews} review{agent.reviews !== 1 ? "s" : ""}
             </div>
           </div>
 
           {/* Phone */}
           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 cursor-default">
-            <svg
-              className="w-4 h-4 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-              />
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
             {agent.phone || "No phone"}
           </div>
@@ -165,21 +279,22 @@ export default function AgentCard({
                 onClick={(e) => { e.stopPropagation(); onEmail?.(); }}
                 className="w-full border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 Email
               </button>
+            </div>
+          )}
+
+          {/* Star rating — always visible if already rated, fades in on hover otherwise */}
+          {canRate && !isOwnCard && (
+            <div className={myRating !== null ? "" : "opacity-0 group-hover:opacity-100 transition-opacity duration-200"}>
+              <StarRating
+                agentId={agent.id}
+                initialRating={myRating}
+                onRated={handleRated}
+              />
             </div>
           )}
 
@@ -190,9 +305,7 @@ export default function AgentCard({
                 <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-150">
                   <div className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 flex-1 min-w-0">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-500" />
-                    <span className="truncate font-medium">
-                      Remove {agent.name}?
-                    </span>
+                    <span className="truncate font-medium">Remove {agent.name}?</span>
                   </div>
                   <button
                     onClick={handleDelete}
@@ -209,10 +322,7 @@ export default function AgentCard({
                 </div>
               ) : (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirming(true);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); setConfirming(true); }}
                   className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-400 active:scale-[0.98] text-sm font-medium transition-all duration-150"
                 >
                   <Trash2 className="w-4 h-4" />

@@ -27,6 +27,15 @@ export default function AgentsSearchView({ agents: initial }: { agents: AgentRow
     searchName: "",
   });
 
+  const specialtyOptions = useMemo(
+    () => [...new Set(initial.map((a) => a.specialty))].sort(),
+    [initial]
+  );
+  const cityOptions = useMemo(
+    () => [...new Set(initial.map((a) => a.city))].sort(),
+    [initial]
+  );
+
   const [messageTarget, setMessageTarget] = useState<AgentRow | null>(null);
   const [sender, setSender]               = useState<MessageSender | null>(null);
   const [isAdmin, setIsAdmin]             = useState(false);
@@ -76,36 +85,12 @@ export default function AgentsSearchView({ agents: initial }: { agents: AgentRow
         return false;
       }
 
-      if (filters.specialties.length > 0) {
-        const specialtyMap: Record<string, string> = {
-          residential: "Residential Sales",
-          commercial: "Commercial Real Estate",
-          luxury: "Luxury Homes",
-          investment: "Investment Properties",
-          rental: "Rental Management",
-          "new-construction": "New Construction",
-        };
-        const key = Object.entries(specialtyMap).find(
-          ([, label]) => label === agent.specialty
-        )?.[0];
-        if (!key || !filters.specialties.includes(key)) return false;
+      if (filters.specialties.length > 0 && !filters.specialties.includes(agent.specialty)) {
+        return false;
       }
 
-      if (filters.cities.length > 0) {
-        const cityMap: Record<string, string> = {
-          "new-york": "New York",
-          "los-angeles": "Los Angeles",
-          chicago: "Chicago",
-          houston: "Houston",
-          phoenix: "Phoenix",
-          philadelphia: "Philadelphia",
-          "san-antonio": "San Antonio",
-          "san-diego": "San Diego",
-        };
-        const key = Object.entries(cityMap).find(
-          ([, label]) => label === agent.city
-        )?.[0];
-        if (!key || !filters.cities.includes(key)) return false;
+      if (filters.cities.length > 0 && !filters.cities.includes(agent.city)) {
+        return false;
       }
 
       return true;
@@ -131,7 +116,11 @@ export default function AgentsSearchView({ agents: initial }: { agents: AgentRow
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col md:flex-row gap-8">
           <div className="md:w-64 flex-shrink-0">
-            <AgentFilters onFiltersChange={setFilters} />
+            <AgentFilters
+              specialties={specialtyOptions}
+              cities={cityOptions}
+              onFiltersChange={setFilters}
+            />
           </div>
 
           <div className="flex-1">

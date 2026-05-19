@@ -2,33 +2,9 @@
 
 import { useState } from "react";
 
-interface FilterOption {
-  id: string;
-  label: string;
-  count?: number;
-}
-
-const SPECIALTIES: FilterOption[] = [
-  { id: "residential", label: "Residential Sales", count: 45 },
-  { id: "commercial", label: "Commercial Real Estate", count: 23 },
-  { id: "luxury", label: "Luxury Homes", count: 18 },
-  { id: "investment", label: "Investment Properties", count: 31 },
-  { id: "rental", label: "Rental Management", count: 27 },
-  { id: "new-construction", label: "New Construction", count: 15 },
-];
-
-const CITIES: FilterOption[] = [
-  { id: "new-york", label: "New York", count: 28 },
-  { id: "los-angeles", label: "Los Angeles", count: 22 },
-  { id: "chicago", label: "Chicago", count: 19 },
-  { id: "houston", label: "Houston", count: 16 },
-  { id: "phoenix", label: "Phoenix", count: 14 },
-  { id: "philadelphia", label: "Philadelphia", count: 12 },
-  { id: "san-antonio", label: "San Antonio", count: 10 },
-  { id: "san-diego", label: "San Diego", count: 9 },
-];
-
 interface AgentFiltersProps {
+  specialties: string[];
+  cities: string[];
   onFiltersChange: (filters: {
     specialties: string[];
     cities: string[];
@@ -36,55 +12,37 @@ interface AgentFiltersProps {
   }) => void;
 }
 
-export default function AgentFilters({ onFiltersChange }: AgentFiltersProps) {
+export default function AgentFilters({ specialties: specialtyOptions, cities: cityOptions, onFiltersChange }: AgentFiltersProps) {
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [searchName, setSearchName] = useState("");
 
-  const handleSpecialtyChange = (specialtyId: string, checked: boolean) => {
+  const handleSpecialtyChange = (value: string, checked: boolean) => {
     const newSelected = checked
-      ? [...selectedSpecialties, specialtyId]
-      : selectedSpecialties.filter(id => id !== specialtyId);
-
+      ? [...selectedSpecialties, value]
+      : selectedSpecialties.filter((s) => s !== value);
     setSelectedSpecialties(newSelected);
-    onFiltersChange({
-      specialties: newSelected,
-      cities: selectedCities,
-      searchName,
-    });
+    onFiltersChange({ specialties: newSelected, cities: selectedCities, searchName });
   };
 
-  const handleCityChange = (cityId: string, checked: boolean) => {
+  const handleCityChange = (value: string, checked: boolean) => {
     const newSelected = checked
-      ? [...selectedCities, cityId]
-      : selectedCities.filter(id => id !== cityId);
-
+      ? [...selectedCities, value]
+      : selectedCities.filter((c) => c !== value);
     setSelectedCities(newSelected);
-    onFiltersChange({
-      specialties: selectedSpecialties,
-      cities: newSelected,
-      searchName,
-    });
+    onFiltersChange({ specialties: selectedSpecialties, cities: newSelected, searchName });
   };
 
   const handleNameSearch = (value: string) => {
     setSearchName(value);
-    onFiltersChange({
-      specialties: selectedSpecialties,
-      cities: selectedCities,
-      searchName: value,
-    });
+    onFiltersChange({ specialties: selectedSpecialties, cities: selectedCities, searchName: value });
   };
 
   const clearAllFilters = () => {
     setSelectedSpecialties([]);
     setSelectedCities([]);
     setSearchName("");
-    onFiltersChange({
-      specialties: [],
-      cities: [],
-      searchName: "",
-    });
+    onFiltersChange({ specialties: [], cities: [], searchName: "" });
   };
 
   return (
@@ -120,138 +78,124 @@ export default function AgentFilters({ onFiltersChange }: AgentFiltersProps) {
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
       </div>
 
       {/* Specialties */}
-      <div className="space-y-3">
-        <label className="block text-sm font-semibold text-gray-900 dark:text-white">
-          Specialty
-        </label>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
-          {SPECIALTIES.map((specialty) => (
-            <label
-              key={specialty.id}
-              className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors group"
-            >
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={selectedSpecialties.includes(specialty.id)}
-                  onChange={(e) => handleSpecialtyChange(specialty.id, e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={`w-5 h-5 border-2 rounded-md flex items-center justify-center transition-all ${
-                  selectedSpecialties.includes(specialty.id)
-                    ? 'bg-blue-600 border-blue-600'
-                    : 'border-gray-300 dark:border-gray-600 group-hover:border-gray-400'
-                }`}>
-                  {selectedSpecialties.includes(specialty.id) && (
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                    </svg>
-                  )}
+      {specialtyOptions.length > 0 && (
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold text-gray-900 dark:text-white">
+            Specialty
+          </label>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {specialtyOptions.map((specialty) => (
+              <label
+                key={specialty}
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors group"
+              >
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={selectedSpecialties.includes(specialty)}
+                    onChange={(e) => handleSpecialtyChange(specialty, e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className={`w-5 h-5 border-2 rounded-md flex items-center justify-center transition-all ${
+                    selectedSpecialties.includes(specialty)
+                      ? "bg-blue-600 border-blue-600"
+                      : "border-gray-300 dark:border-gray-600 group-hover:border-gray-400"
+                  }`}>
+                    {selectedSpecialties.includes(specialty) && (
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                      </svg>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                {specialty.label}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-full">
-                {specialty.count}
-              </span>
-            </label>
-          ))}
+                <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{specialty}</span>
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Cities */}
-      <div className="space-y-3">
-        <label className="block text-sm font-semibold text-gray-900 dark:text-white">
-          City
-        </label>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
-          {CITIES.map((city) => (
-            <label
-              key={city.id}
-              className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors group"
-            >
-              <div className="relative">
-                <input
-                  type="checkbox"
-                  checked={selectedCities.includes(city.id)}
-                  onChange={(e) => handleCityChange(city.id, e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={`w-5 h-5 border-2 rounded-md flex items-center justify-center transition-all ${
-                  selectedCities.includes(city.id)
-                    ? 'bg-blue-600 border-blue-600'
-                    : 'border-gray-300 dark:border-gray-600 group-hover:border-gray-400'
-                }`}>
-                  {selectedCities.includes(city.id) && (
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                    </svg>
-                  )}
+      {cityOptions.length > 0 && (
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold text-gray-900 dark:text-white">
+            City
+          </label>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {cityOptions.map((city) => (
+              <label
+                key={city}
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors group"
+              >
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={selectedCities.includes(city)}
+                    onChange={(e) => handleCityChange(city, e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className={`w-5 h-5 border-2 rounded-md flex items-center justify-center transition-all ${
+                    selectedCities.includes(city)
+                      ? "bg-blue-600 border-blue-600"
+                      : "border-gray-300 dark:border-gray-600 group-hover:border-gray-400"
+                  }`}>
+                    {selectedCities.includes(city) && (
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                      </svg>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">
-                {city.label}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-full">
-                {city.count}
-              </span>
-            </label>
-          ))}
+                <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{city}</span>
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Active Filters Summary */}
       {(selectedSpecialties.length > 0 || selectedCities.length > 0) && (
         <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            Active filters:
-          </div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Active filters:</div>
           <div className="flex flex-wrap gap-2">
-            {selectedSpecialties.map(specialtyId => {
-              const specialty = SPECIALTIES.find(s => s.id === specialtyId);
-              return specialty ? (
-                <span
-                  key={specialtyId}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full"
+            {selectedSpecialties.map((specialty) => (
+              <span
+                key={specialty}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full"
+              >
+                {specialty}
+                <button
+                  onClick={() => handleSpecialtyChange(specialty, false)}
+                  className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
                 >
-                  {specialty.label}
-                  <button
-                    onClick={() => handleSpecialtyChange(specialtyId, false)}
-                    className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
-                  >
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                  </button>
-                </span>
-              ) : null;
-            })}
-            {selectedCities.map(cityId => {
-              const city = CITIES.find(c => c.id === cityId);
-              return city ? (
-                <span
-                  key={cityId}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full"
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                  </svg>
+                </button>
+              </span>
+            ))}
+            {selectedCities.map((city) => (
+              <span
+                key={city}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full"
+              >
+                {city}
+                <button
+                  onClick={() => handleCityChange(city, false)}
+                  className="hover:bg-green-200 dark:hover:bg-green-800 rounded-full p-0.5"
                 >
-                  {city.label}
-                  <button
-                    onClick={() => handleCityChange(cityId, false)}
-                    className="hover:bg-green-200 dark:hover:bg-green-800 rounded-full p-0.5"
-                  >
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                  </button>
-                </span>
-              ) : null;
-            })}
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                  </svg>
+                </button>
+              </span>
+            ))}
           </div>
         </div>
       )}
