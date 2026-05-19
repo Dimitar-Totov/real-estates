@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
@@ -138,6 +138,14 @@ type VisitingState = {
   hour: number;
   status: "pending" | "confirmed" | "cancelled";
 } | null;
+type BusySlot = { visitDate: string; hour: number };
+
+function busyKey(date: Date, hour: number): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}:${hour}`;
+}
 
 export default function TourBookingCard({ propertyId }: { propertyId: number }) {
   const router = useRouter();
@@ -148,6 +156,23 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
   const [bookingStatus, setBookingStatus] = useState<BookingStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [visiting, setVisiting] = useState<VisitingState>(null);
+  const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
+  const [hoveredBusyHour, setHoveredBusyHour] = useState<number | null>(null);
+
+  const busySet = useMemo(() => {
+    const s = new Set<string>();
+    for (const slot of busySlots) {
+      s.add(busyKey(new Date(slot.visitDate), slot.hour));
+    }
+    return s;
+  }, [busySlots]);
+
+  const fetchBusySlots = useCallback(() => {
+    fetch(`/api/visitings/busy-slots?propertyId=${propertyId}`)
+      .then((r) => r.json())
+      .then(setBusySlots)
+      .catch(() => {});
+  }, [propertyId]);
 
   useEffect(() => {
     fetch(`/api/visitings?propertyId=${propertyId}`)
@@ -163,7 +188,9 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
         }
       })
       .catch(() => {});
-  }, [propertyId]);
+
+    fetchBusySlots();
+  }, [propertyId, fetchBusySlots]);
 
   const selectedDate = workdays[selectedDateIdx];
   const { month, day, weekday } = formatDate(selectedDate);
@@ -200,6 +227,7 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
         status: created.status ?? "pending",
       });
       setBookingStatus("idle");
+      fetchBusySlots();
     } catch {
       setErrorMsg("Network error. Please try again.");
       setBookingStatus("error");
@@ -329,10 +357,30 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
 
   const hourItems = HOURS.map((h) => {
     const isSelected = selectedHour === h;
+    const busy = busySet.has(busyKey(selectedDate, h));
+
+    if (busy) {
+      return (
+        <button
+          key={h}
+          disabled
+          onMouseEnter={() => setHoveredBusyHour(h)}
+          onMouseLeave={() => setHoveredBusyHour(null)}
+          className="flex flex-col items-center justify-center w-full py-2.5 px-1 rounded-xl border-2 border-rose-200 bg-rose-50 cursor-not-allowed transition-all duration-150"
+        >
+          <svg className="w-3.5 h-3.5 text-rose-400 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+          <span className="text-sm font-bold leading-tight text-rose-300 line-through">{h}</span>
+          <span className="text-[10px] font-medium tracking-wider uppercase text-rose-300">{h < 12 ? "AM" : "PM"}</span>
+        </button>
+      );
+    }
+
     return (
       <button
         key={h}
-        onClick={() => { setSelectedHour(h); setBookingStatus("idle"); }}
+        onClick={() => { setSelectedHour(h); setBookingStatus("idle"); setHoveredBusyHour(null); }}
         className={[
           "flex flex-col items-center justify-center w-full py-2.5 px-1 rounded-xl border-2 transition-all duration-150 shrink-0",
           isSelected
@@ -358,6 +406,16 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
       <div>
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Select time</p>
         <HorizontalSlider items={hourItems} visibleCount={VISIBLE_COUNT} />
+        {hoveredBusyHour !== null && (
+          <div className="mt-3 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 animate-in fade-in duration-150">
+            <svg className="w-4 h-4 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+            <span className="text-sm text-rose-700">
+              <span className="font-semibold">{formatHour(hoveredBusyHour)}</span> is already booked on this date — please choose a different time.
+            </span>
+          </div>
+        )}
       </div>
 
       {bookingStatus === "unauthenticated" && (
@@ -400,8 +458,13 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
 
       <button
         onClick={handleRequestShowing}
-        disabled={bookingStatus === "loading"}
-        className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm tracking-wide transition-colors shadow-sm flex items-center justify-center gap-2"
+        disabled={bookingStatus === "loading" || busySet.has(busyKey(selectedDate, selectedHour))}
+        className={[
+          "w-full py-3.5 rounded-xl text-white font-semibold text-sm tracking-wide transition-colors shadow-sm flex items-center justify-center gap-2 disabled:cursor-not-allowed",
+          busySet.has(busyKey(selectedDate, selectedHour))
+            ? "bg-rose-400 opacity-80"
+            : "bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:opacity-60",
+        ].join(" ")}
       >
         {bookingStatus === "loading" ? (
           <>
@@ -410,6 +473,13 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
             Requesting…
+          </>
+        ) : busySet.has(busyKey(selectedDate, selectedHour)) ? (
+          <>
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+            Already Scheduled
           </>
         ) : (
           "Request Showing"
