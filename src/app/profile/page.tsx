@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import ProfilePage from "@/components/ProfilePage";
 import AdminPanel from "@/components/AdminPanel";
 import { type VisitingRow } from "@/components/VisitingPropertyCard";
-import { type Property, type Meeting } from "@/db/schema";
+import { type Property } from "@/db/schema";
 
 type UserProfile = {
   id: number;
@@ -29,7 +29,6 @@ export default function ProfileRoute() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [visitings, setVisitings] = useState<VisitingRow[]>([]);
   const [listings, setListings] = useState<ListingRow[]>([]);
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
 
   useEffect(() => {
     fetch("/api/user/me")
@@ -46,12 +45,13 @@ export default function ProfileRoute() {
       .then((r) => (r.ok ? r.json() : []))
       .then(setListings)
       .catch(() => {});
-
-    fetch("/api/meetings/my")
-      .then((r) => (r.ok ? r.json() : []))
-      .then(setMeetings)
-      .catch(() => {});
   }, [router]);
+
+  const handleFetchMeetings = async (page: number) => {
+    const res = await fetch(`/api/meetings/my?page=${page}`);
+    if (!res.ok) return { rows: [], total: 0 };
+    return res.json() as Promise<{ rows: import("@/db/schema").Meeting[]; total: number }>;
+  };
 
   const makeUploadHandler = (type: "avatar" | "cover") => async (file: File): Promise<string> => {
     const body = new FormData();
@@ -124,11 +124,6 @@ export default function ProfileRoute() {
       const data = await res.json().catch(() => ({}));
       throw new Error((data as { error?: string }).error ?? "Failed to confirm the showing.");
     }
-    // Refresh meetings list after a new one is created
-    fetch("/api/meetings/my")
-      .then((r) => (r.ok ? r.json() : meetings))
-      .then(setMeetings)
-      .catch(() => {});
   };
 
   const handleDeclineVisiting = async (visitingId: number) => {
@@ -164,7 +159,7 @@ export default function ProfileRoute() {
         email={profile.contactEmail ?? ""}
         visitings={visitings}
         listings={listings}
-        meetings={meetings}
+        onFetchMeetings={handleFetchMeetings}
         onAvatarChange={makeUploadHandler("avatar")}
         onCoverChange={makeUploadHandler("cover")}
         isOwnProfile={true}

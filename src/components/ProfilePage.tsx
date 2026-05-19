@@ -59,7 +59,7 @@ interface ProfilePageProps {
   email: string;
   visitings?: VisitingRow[];
   listings?: ListingRow[];
-  meetings?: Meeting[];
+  onFetchMeetings?: (page: number) => Promise<{ rows: Meeting[]; total: number }>;
   onAvatarChange?: (file: File) => Promise<string>;
   onCoverChange?: (file: File) => Promise<string>;
   isOwnProfile?: boolean;
@@ -80,7 +80,7 @@ export default function ProfilePage({
   email,
   visitings = [],
   listings: listingsProp = [],
-  meetings = [],
+  onFetchMeetings,
   onAvatarChange,
   onCoverChange,
   isOwnProfile = false,
@@ -177,6 +177,31 @@ export default function ProfilePage({
   const scrollCarouselLeft = () => carouselRef.current?.scrollBy({ left: -CARD_SCROLL_STEP, behavior: "smooth" });
   const scrollCarouselRight = () => carouselRef.current?.scrollBy({ left: CARD_SCROLL_STEP, behavior: "smooth" });
 
+  // Meetings pagination
+  const [meetingsList, setMeetingsList] = useState<Meeting[]>([]);
+  const [meetingsTotal, setMeetingsTotal] = useState(0);
+  const [meetingsPage, setMeetingsPage] = useState(1);
+  const [meetingsLoading, setMeetingsLoading] = useState(false);
+  const meetingsTotalPages = Math.ceil(meetingsTotal / 5);
+
+  const fetchMeetingsPage = useCallback(async (page: number) => {
+    if (!onFetchMeetings) return;
+    setMeetingsLoading(true);
+    try {
+      const { rows, total } = await onFetchMeetings(page);
+      setMeetingsList(rows);
+      setMeetingsTotal(total);
+      setMeetingsPage(page);
+    } finally {
+      setMeetingsLoading(false);
+    }
+  }, [onFetchMeetings]);
+
+  useEffect(() => {
+    if (activeTab === "meetings") fetchMeetingsPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   // ── Handlers ──
 
   const handleFileSelect = async (file: File, type: "avatar" | "cover", callback: (f: File) => Promise<string>) => {
@@ -226,6 +251,7 @@ export default function ProfilePage({
     await onAcceptVisiting(visitingId);
     setVisitingsState((prev) => prev.filter((v) => v.visitingId !== visitingId));
     showSuccessToast("Showing confirmed! A meeting has been scheduled.");
+    fetchMeetingsPage(meetingsPage);
   };
 
   const handleDeclineVisiting = async (visitingId: number) => {
@@ -489,13 +515,13 @@ export default function ProfilePage({
         {/* Tab switcher — agents only */}
         {isAgent && (
           <div className="flex justify-center mb-8 px-6">
-            <div className="inline-flex items-center bg-gray-100 rounded-2xl p-1.5 gap-1">
+            <div className="flex flex-wrap justify-center items-center bg-gray-100 rounded-2xl p-1.5 gap-1">
               {(["showings", "listings", "meetings"] as const).map((tab) => {
                 const labels = { showings: "Requested Showings", listings: "My Listings", meetings: "Meetings" };
-                const counts = { showings: visitingsState.length, listings: listings.length, meetings: meetings.length };
+                const counts = { showings: visitingsState.length, listings: listings.length, meetings: meetingsTotal };
                 return (
                   <button key={tab} onClick={() => setActiveTab(tab)}
-                    className={["px-6 py-2.5 rounded-xl text-base font-semibold transition-all duration-200", activeTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"].join(" ")}>
+                    className={["px-4 sm:px-6 py-2.5 rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 whitespace-nowrap", activeTab === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"].join(" ")}>
                     {labels[tab]}
                     {counts[tab] > 0 && (
                       <span className={["ml-2 px-1.5 py-0.5 rounded-full text-xs font-bold", activeTab === tab ? "bg-gray-900 text-white" : "bg-gray-300 text-gray-600"].join(" ")}>
@@ -519,7 +545,7 @@ export default function ProfilePage({
         {/* ── Showings carousel ── */}
         {(!isAgent || activeTab === "showings") && (
           visitingsState.length === 0
-            ? <p className="px-6 sm:px-10 text-sm text-gray-400">No showings requested yet.</p>
+            ? <p className="w-full text-center text-xl text-gray-400">No showings requested yet.</p>
             : (
               <div className="relative">
                 {canScrollLeft && (
@@ -583,41 +609,113 @@ export default function ProfilePage({
 
         {/* ── Meetings list ── */}
         {isAgent && activeTab === "meetings" && (
-          <div className="px-6 sm:px-10">
-            {meetings.length === 0
-              ? <p className="text-sm text-gray-400">No meetings yet.</p>
-              : (
-                <div className="rounded-xl border border-gray-100 bg-white overflow-hidden">
-                  {meetings.map((meeting) => {
+          <div className="w-full">
+            {/* Spinner */}
+            {meetingsLoading && (
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <div className="relative w-14 h-14">
+                  <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
+                  <div className="absolute inset-0 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin" />
+                </div>
+                <p className="text-sm text-gray-400 tracking-wide">Loading meetings…</p>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!meetingsLoading && meetingsList.length === 0 && (
+              <p className="text-base text-gray-400 text-center py-10">No meetings yet.</p>
+            )}
+
+            {/* Meeting rows */}
+            {!meetingsLoading && meetingsList.length > 0 && (
+              <>
+                <div>
+                  {meetingsList.map((meeting) => {
                     const d = new Date(meeting.meetingDate);
                     const dateLabel = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
                     const timeLabel = formatHour(d.getHours());
                     return (
-                      <div key={meeting.id} className="flex flex-row flex-wrap items-center gap-x-6 gap-y-1 px-5 py-4 border-b border-gray-100 last:border-b-0">
-                        <span className="text-sm font-semibold text-indigo-600 whitespace-nowrap min-w-[150px]">
-                          {dateLabel} · {timeLabel}
-                        </span>
-                        <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800 min-w-[100px]">
-                          <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />{meeting.requesterUsername}
-                        </span>
-                        <span className="flex items-center gap-1.5 text-sm text-gray-500 flex-1 min-w-[140px]">
-                          <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0" />{meeting.propertyAddress}
-                        </span>
-                        {meeting.requesterPhone && (
-                          <span className="flex items-center gap-1.5 text-sm text-gray-500 whitespace-nowrap">
-                            <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />{meeting.requesterPhone}
+                      <div key={meeting.id} className="py-5 border-b border-gray-300 last:border-b-0 px-4 sm:px-6">
+                        {/* Mobile: stacked */}
+                        <div className="flex flex-col gap-2 lg:hidden">
+                          <span className="text-base font-semibold text-indigo-600">{dateLabel} · {timeLabel}</span>
+                          <span className="flex items-center gap-2 text-base font-medium text-gray-800">
+                            <User className="w-4 h-4 text-gray-400 shrink-0" />{meeting.requesterUsername}
                           </span>
-                        )}
-                        {meeting.requesterEmail && (
-                          <span className="flex items-center gap-1.5 text-sm text-gray-500 whitespace-nowrap">
-                            <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />{meeting.requesterEmail}
+                          <span className="text-base font-medium text-gray-700">{meeting.propertyTitle}</span>
+                          <span className="flex items-center gap-2 text-base text-gray-500">
+                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />{meeting.propertyAddress}
                           </span>
-                        )}
+                          <span className="flex items-center gap-2 text-base text-gray-500">
+                            <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                            {meeting.requesterPhone ?? <span className="text-gray-300">—</span>}
+                          </span>
+                          <span className="flex items-center gap-2 text-base text-gray-500">
+                            <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                            {meeting.requesterEmail ?? <span className="text-gray-300">—</span>}
+                          </span>
+                        </div>
+                        {/* Desktop: aligned grid */}
+                        <div className="hidden lg:grid items-center mx-auto" style={{ gridTemplateColumns: "11rem 8rem 12rem 14rem 10rem 1fr", width: "fit-content", gap: "0 3rem" }}>
+                          <span className="text-base font-semibold text-indigo-600 whitespace-nowrap">{dateLabel} · {timeLabel}</span>
+                          <span className="flex items-center gap-2 text-base font-medium text-gray-800 truncate">
+                            <User className="w-4 h-4 text-gray-400 shrink-0" />{meeting.requesterUsername}
+                          </span>
+                          <span className="text-base font-medium text-gray-700 truncate">{meeting.propertyTitle}</span>
+                          <span className="flex items-center gap-2 text-base text-gray-500 truncate">
+                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />{meeting.propertyAddress}
+                          </span>
+                          <span className="flex items-center gap-2 text-base text-gray-500 whitespace-nowrap">
+                            <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                            {meeting.requesterPhone ?? <span className="text-gray-300">—</span>}
+                          </span>
+                          <span className="flex items-center gap-2 text-base text-gray-500 truncate">
+                            <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                            {meeting.requesterEmail ?? <span className="text-gray-300">—</span>}
+                          </span>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
-              )}
+
+                {/* Pagination */}
+                {meetingsTotalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-8">
+                    <button
+                      onClick={() => fetchMeetingsPage(meetingsPage - 1)}
+                      disabled={meetingsPage === 1}
+                      className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    {Array.from({ length: meetingsTotalPages }, (_, i) => i + 1).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => fetchMeetingsPage(p)}
+                        className={[
+                          "w-9 h-9 rounded-full text-sm font-semibold transition-colors",
+                          p === meetingsPage
+                            ? "bg-indigo-600 text-white shadow-sm"
+                            : "border border-gray-300 text-gray-600 hover:bg-gray-100",
+                        ].join(" ")}
+                      >
+                        {p}
+                      </button>
+                    ))}
+
+                    <button
+                      onClick={() => fetchMeetingsPage(meetingsPage + 1)}
+                      disabled={meetingsPage === meetingsTotalPages}
+                      className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>

@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
       .from(propertyVisitings)
       .innerJoin(properties, eq(propertyVisitings.propertyId, properties.id))
       .leftJoin(users, eq(propertyVisitings.userId, users.id))
-      .where(eq(properties.listedByAgentId, agent.id))
+      .where(and(eq(properties.listedByAgentId, agent.id), eq(propertyVisitings.status, "pending")))
       .orderBy(propertyVisitings.visitDate);
 
     // Strategy B: visitings linked via message sent to this agent (covers fallback-assigned properties)
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
         eq(messages.receiverId, payload.id),
       ))
       .leftJoin(users, eq(propertyVisitings.userId, users.id))
-      .where(isNotNull(propertyVisitings.messageId))
+      .where(and(isNotNull(propertyVisitings.messageId), eq(propertyVisitings.status, "pending")))
       .orderBy(propertyVisitings.visitDate);
 
     // Merge, deduplicate by visitingId
