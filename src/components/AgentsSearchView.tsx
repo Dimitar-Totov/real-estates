@@ -40,7 +40,8 @@ export default function AgentsSearchView({ agents: initial }: { agents: AgentRow
   const [sender, setSender]               = useState<MessageSender | null>(null);
   const [isAdmin, setIsAdmin]             = useState(false);
   const [canRate, setCanRate]             = useState(false);
-  const [myRatings, setMyRatings]         = useState<Record<string, number | null>>({});
+  const [myRatings, setMyRatings]     = useState<Record<string, number | null>>({});
+  const [myComments, setMyComments]   = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     fetch("/api/user/me")
@@ -56,18 +57,19 @@ export default function AgentsSearchView({ agents: initial }: { agents: AgentRow
       .catch(() => {});
   }, []);
 
-  // Once we know the user can rate, fetch their existing ratings for all agents
+  // Once we know the user can rate, fetch their existing ratings + comments for all agents
   useEffect(() => {
     if (!canRate || initial.length === 0) return;
     Promise.all(
       initial.map((a) =>
         fetch(`/api/agents/${a.id}/my-rating`)
           .then((r) => r.json())
-          .then((d) => [a.id, d.rating ?? null] as [string, number | null])
-          .catch(() => [a.id, null] as [string, number | null])
+          .then((d) => [a.id, d] as [string, { rating: number | null; comment: string | null }])
+          .catch(() => [a.id, { rating: null, comment: null }] as [string, { rating: number | null; comment: string | null }])
       )
     ).then((pairs) => {
-      setMyRatings(Object.fromEntries(pairs));
+      setMyRatings(Object.fromEntries(pairs.map(([id, d]) => [id, d.rating])));
+      setMyComments(Object.fromEntries(pairs.map(([id, d]) => [id, d.comment])));
     });
   }, [canRate, initial]);
 
@@ -152,6 +154,7 @@ export default function AgentsSearchView({ agents: initial }: { agents: AgentRow
                     isOwnCard={agent.userId === sender?.id}
                     canRate={canRate && agent.userId !== sender?.id}
                     myRating={myRatings[agent.id] ?? null}
+                    myComment={myComments[agent.id] ?? null}
                     onDelete={handleDelete}
                     onEmail={() => setMessageTarget(agent)}
                   />

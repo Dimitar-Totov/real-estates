@@ -210,6 +210,7 @@ export const agentRatings = pgTable("agent_ratings", {
   agentId:   integer("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
   userId:    integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   rating:    integer("rating").notNull(),
+  comment:   text("comment"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

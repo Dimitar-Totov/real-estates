@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { agents, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { agents, users, agentRatings } from "@/db/schema";
+import { eq, sql } from "drizzle-orm";
 import AgentsSearchView from "@/components/AgentsSearchView";
 import { cdnUrl } from "@/services/userImagesService";
 
@@ -17,7 +17,11 @@ export default async function AgentsSearchPage() {
       image:      agents.image,
       avatarKey:  users.avatarKey,
       rating:     agents.rating,
-      reviews:    agents.reviews,
+      reviews:    sql<number>`(
+        SELECT COUNT(*) FROM ${agentRatings}
+        WHERE ${agentRatings.agentId} = ${agents.id}
+        AND ${agentRatings.comment} IS NOT NULL
+      )`.as("reviews"),
       experience: agents.experience,
       phone:      agents.phone,
       email:      agents.email,
@@ -28,10 +32,11 @@ export default async function AgentsSearchPage() {
 
   const agentList = rows.map((a) => ({
     ...a,
-    id:     String(a.id),
-    userId: a.userId ?? null,
-    rating: Number(a.rating),
-    image:  a.avatarKey ? cdnUrl(a.avatarKey) : a.image,
+    id:      String(a.id),
+    userId:  a.userId ?? null,
+    rating:  Number(a.rating),
+    reviews: Number(a.reviews),
+    image:   a.avatarKey ? cdnUrl(a.avatarKey) : a.image,
   }));
 
   return <AgentsSearchView agents={agentList} />;

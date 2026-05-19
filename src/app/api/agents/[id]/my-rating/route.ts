@@ -23,9 +23,9 @@ export async function GET(
   if (isNaN(agentId)) return NextResponse.json({ rating: null });
 
   const [row] = await db
-    .select({ rating: agentRatings.rating })
+    .select({ rating: agentRatings.rating, comment: agentRatings.comment })
     .from(agentRatings)
     .where(and(eq(agentRatings.agentId, agentId), eq(agentRatings.userId, payload.id)));
 
-  return NextResponse.json({ rating: row?.rating ?? null });
+  return NextResponse.json({ rating: row?.rating ?? null, comment: row?.comment ?? null });
 }

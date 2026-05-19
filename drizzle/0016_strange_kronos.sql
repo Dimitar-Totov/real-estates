@@ -1,0 +1,1 @@
+ALTER TABLE "agent_ratings" ADD COLUMN "comment" text;
