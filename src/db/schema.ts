@@ -234,3 +234,14 @@ export const feedItems = pgTable("feed_items", {
 
 export type FeedItem = typeof feedItems.$inferSelect;
 export type NewFeedItem = typeof feedItems.$inferInsert;
+
+export const soldProperties = pgTable("sold_properties", {
+  id:           serial("id").primaryKey(),
+  propertyName: text("property_name").notNull(),
+  agent:        text("agent").notNull(),
+  buyer:        text("buyer").notNull(),
+  dateOfBuying: timestamp("dateof_buying").notNull(),
+});
+
+export type SoldProperty = typeof soldProperties.$inferSelect;
+export type NewSoldProperty = typeof soldProperties.$inferInsert;

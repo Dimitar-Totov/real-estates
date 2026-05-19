@@ -120,6 +120,13 @@
       "when": 1779203837588,
       "tag": "0016_strange_kronos",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1779210097489,
+      "tag": "0017_natural_eternals",
+      "breakpoints": true
     }
   ]
 }
