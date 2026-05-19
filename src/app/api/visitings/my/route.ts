@@ -5,6 +5,42 @@ import { propertyVisitings, properties, agents, messages, users } from "@/db/sch
 import { eq, and, isNotNull } from "drizzle-orm";
 import { getPropertyCoverImage } from "@/services/imagesService";
 
+export async function HEAD(req: NextRequest) {
+  const token = req.cookies.get("token")?.value;
+  if (!token) return new NextResponse(null, { status: 401 });
+
+  let payload;
+  try {
+    payload = verifyToken(token);
+  } catch {
+    return new NextResponse(null, { status: 401 });
+  }
+
+  if (payload.role !== "agent") return new NextResponse(null, { status: 200, headers: { "X-Pending-Count": "0" } });
+
+  const [agent] = await db
+    .select({ id: agents.id })
+    .from(agents)
+    .where(eq(agents.userId, payload.id))
+    .limit(1);
+
+  if (!agent) return new NextResponse(null, { status: 200, headers: { "X-Pending-Count": "0" } });
+
+  const [fromListings, fromMessages] = await Promise.all([
+    db.select({ id: propertyVisitings.id })
+      .from(propertyVisitings)
+      .innerJoin(properties, eq(propertyVisitings.propertyId, properties.id))
+      .where(and(eq(properties.listedByAgentId, agent.id), eq(propertyVisitings.status, "pending"))),
+    db.select({ id: propertyVisitings.id })
+      .from(propertyVisitings)
+      .innerJoin(messages, and(eq(propertyVisitings.messageId, messages.id), eq(messages.receiverId, payload.id)))
+      .where(and(isNotNull(propertyVisitings.messageId), eq(propertyVisitings.status, "pending"))),
+  ]);
+
+  const uniqueIds = new Set([...fromListings.map((r) => r.id), ...fromMessages.map((r) => r.id)]);
+  return new NextResponse(null, { status: 200, headers: { "X-Pending-Count": String(uniqueIds.size) } });
+}
+
 export async function GET(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

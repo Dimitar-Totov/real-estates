@@ -6,6 +6,20 @@ import { useRouter } from "next/navigation";
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
 const VISIBLE_COUNT = 3;
 
+function isToday(date: Date): boolean {
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+function isPastHour(date: Date, hour: number): boolean {
+  if (!isToday(date)) return false;
+  return hour <= new Date().getHours();
+}
+
 function isWeekday(date: Date) {
   const day = date.getDay();
   return day !== 0 && day !== 6;
@@ -195,6 +209,13 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
   const selectedDate = workdays[selectedDateIdx];
   const { month, day, weekday } = formatDate(selectedDate);
 
+  useEffect(() => {
+    if (isPastHour(selectedDate, selectedHour)) {
+      const firstValid = HOURS.find((h) => !isPastHour(selectedDate, h) && !busySet.has(busyKey(selectedDate, h)));
+      if (firstValid !== undefined) setSelectedHour(firstValid);
+    }
+  }, [selectedDateIdx, selectedDate, selectedHour, busySet]);
+
   async function handleRequestShowing() {
     setBookingStatus("loading");
     setErrorMsg("");
@@ -358,21 +379,33 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
   const hourItems = HOURS.map((h) => {
     const isSelected = selectedHour === h;
     const busy = busySet.has(busyKey(selectedDate, h));
+    const past = isPastHour(selectedDate, h);
 
-    if (busy) {
+    if (busy || past) {
       return (
         <button
           key={h}
           disabled
-          onMouseEnter={() => setHoveredBusyHour(h)}
-          onMouseLeave={() => setHoveredBusyHour(null)}
-          className="flex flex-col items-center justify-center w-full py-2.5 px-1 rounded-xl border-2 border-rose-200 bg-rose-50 cursor-not-allowed transition-all duration-150"
+          onMouseEnter={() => busy ? setHoveredBusyHour(h) : undefined}
+          onMouseLeave={() => busy ? setHoveredBusyHour(null) : undefined}
+          className={[
+            "flex flex-col items-center justify-center w-full py-2.5 px-1 rounded-xl border-2 cursor-not-allowed transition-all duration-150",
+            past && !busy
+              ? "border-gray-200 bg-gray-50"
+              : "border-rose-200 bg-rose-50",
+          ].join(" ")}
         >
-          <svg className="w-3.5 h-3.5 text-rose-400 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-          </svg>
-          <span className="text-sm font-bold leading-tight text-rose-300 line-through">{h}</span>
-          <span className="text-[10px] font-medium tracking-wider uppercase text-rose-300">{h < 12 ? "AM" : "PM"}</span>
+          {busy ? (
+            <svg className="w-3.5 h-3.5 text-rose-400 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
+          ) : (
+            <svg className="w-3.5 h-3.5 text-gray-300 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+          <span className={["text-sm font-bold leading-tight line-through", busy ? "text-rose-300" : "text-gray-300"].join(" ")}>{h}</span>
+          <span className={["text-[10px] font-medium tracking-wider uppercase", busy ? "text-rose-300" : "text-gray-300"].join(" ")}>{h < 12 ? "AM" : "PM"}</span>
         </button>
       );
     }
@@ -458,10 +491,10 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
 
       <button
         onClick={handleRequestShowing}
-        disabled={bookingStatus === "loading" || busySet.has(busyKey(selectedDate, selectedHour))}
+        disabled={bookingStatus === "loading" || busySet.has(busyKey(selectedDate, selectedHour)) || isPastHour(selectedDate, selectedHour)}
         className={[
           "w-full py-3.5 rounded-xl text-white font-semibold text-sm tracking-wide transition-colors shadow-sm flex items-center justify-center gap-2 disabled:cursor-not-allowed",
-          busySet.has(busyKey(selectedDate, selectedHour))
+          busySet.has(busyKey(selectedDate, selectedHour)) || isPastHour(selectedDate, selectedHour)
             ? "bg-rose-400 opacity-80"
             : "bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:opacity-60",
         ].join(" ")}

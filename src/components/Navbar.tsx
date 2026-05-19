@@ -125,6 +125,7 @@ export default function Navbar() {
   const [mobileExpanded, setMobileExpanded]     = useState<string | null>(null);
   const [user, setUser]                         = useState<UserInfo | null>(null);
   const [msgCount, setMsgCount]                 = useState(0);
+  const [visitingCount, setVisitingCount]       = useState(0);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshMsgCount = useCallback(() => {
@@ -136,15 +137,26 @@ export default function Navbar() {
       .catch(() => {});
   }, []);
 
+  const refreshVisitingCount = useCallback(() => {
+    fetch("/api/visitings/my", { method: "HEAD" })
+      .then((r) => {
+        const count = parseInt(r.headers.get("X-Pending-Count") ?? "0", 10);
+        setVisitingCount(isNaN(count) ? 0 : count);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     const u = parseUserCookie();
     setUser(u);
     if (u) {
       refreshMsgCount();
+      if (u.role === "agent") refreshVisitingCount();
     } else {
       setMsgCount(0);
+      setVisitingCount(0);
     }
-  }, [pathname, refreshMsgCount]);
+  }, [pathname, refreshMsgCount, refreshVisitingCount]);
 
   useEffect(() => {
     window.addEventListener("messages:seen", refreshMsgCount);
@@ -318,14 +330,19 @@ export default function Navbar() {
                 <Link
                   href="/profile"
                   className={[
-                    "text-sm font-medium transition-colors",
+                    "relative text-sm font-medium transition-colors",
                     isProfileActive ? "text-white" : "text-white/70 hover:text-white",
                   ].join(" ")}
                 >
                   {user.role === "admin" ? (
                     <span className="text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
                   ) : (
-                    user.username
+                    <>
+                      {user.username}
+                      {visitingCount > 0 && (
+                        <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full bg-red-500" />
+                      )}
+                    </>
                   )}
                 </Link>
                 <Link
@@ -453,14 +470,19 @@ export default function Navbar() {
                       href="/profile"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={[
-                        "text-sm font-medium transition-colors",
+                        "relative text-sm font-medium transition-colors",
                         isProfileActive ? "text-white" : "text-white/80 hover:text-white",
                       ].join(" ")}
                     >
                       {user.role === "admin" ? (
                         <span className="text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-md uppercase tracking-wide">admin</span>
                       ) : (
-                        user.username
+                        <>
+                          {user.username}
+                          {visitingCount > 0 && (
+                            <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full bg-red-500" />
+                          )}
+                        </>
                       )}
                     </Link>
                     <Link
