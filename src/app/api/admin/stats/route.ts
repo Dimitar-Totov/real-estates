@@ -19,11 +19,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [[{ propertiesCount }], [{ agentsCount }], [{ usersCount }]] = await Promise.all([
+  const [[{ propertiesCount }], [{ agentsCount }], [{ usersCount }], [{ forSaleCount }], [{ forRentCount }]] = await Promise.all([
     db.select({ propertiesCount: count() }).from(properties),
     db.select({ agentsCount: count() }).from(agents),
     db.select({ usersCount: count() }).from(users).where(eq(users.role, "user")),
+    db.select({ forSaleCount: count() }).from(properties).where(eq(properties.status, "for_sale")),
+    db.select({ forRentCount: count() }).from(properties).where(eq(properties.status, "for_rent")),
   ]);
 
-  return NextResponse.json({ properties: propertiesCount, agents: agentsCount, users: usersCount });
+  return NextResponse.json({
+    properties: propertiesCount,
+    agents: agentsCount,
+    users: usersCount,
+    forSale: forSaleCount,
+    forRent: forRentCount,
+  });
 }

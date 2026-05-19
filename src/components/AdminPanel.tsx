@@ -56,45 +56,45 @@ const areaSeries = [
   { name: "Listed", data: [80,  95,  72, 110,  88, 130, 145, 118, 160, 130, 180, 165] },
 ];
 
-const donutOptions: ApexOptions = {
-  chart: {
-    type: "donut",
-    animations: { enabled: true, speed: 900, animateGradually: { enabled: true, delay: 120 } },
-    fontFamily: "var(--font-inter), Inter, sans-serif",
-  },
-  colors: [TEAL, ORANGE, NAVY],
-  labels: ["Completed", "In Progress", "Pending"],
-  plotOptions: {
-    pie: {
-      donut: {
-        size: "68%",
-        labels: {
-          show: true,
-          name: { show: true, color: "#6b7280", fontSize: "13px", offsetY: 20 },
-          value: { show: true, color: "#111827", fontSize: "26px", fontWeight: "800", offsetY: -14 },
-          total: {
+function buildDonutOptions(total: number): ApexOptions {
+  return {
+    chart: {
+      type: "donut",
+      animations: { enabled: true, speed: 900, animateGradually: { enabled: true, delay: 120 } },
+      fontFamily: "var(--font-inter), Inter, sans-serif",
+    },
+    colors: [TEAL, ORANGE],
+    labels: ["For Sale", "For Rent"],
+    plotOptions: {
+      pie: {
+        donut: {
+          size: "68%",
+          labels: {
             show: true,
-            label: "Projects",
-            color: "#6b7280",
-            fontSize: "13px",
-            formatter: () => "142",
+            name: { show: true, color: "#6b7280", fontSize: "13px", offsetY: 20 },
+            value: { show: true, color: "#111827", fontSize: "26px", fontWeight: "800", offsetY: -14 },
+            total: {
+              show: true,
+              label: "Properties",
+              color: "#6b7280",
+              fontSize: "13px",
+              formatter: () => String(total),
+            },
           },
         },
       },
     },
-  },
-  legend: {
-    position: "bottom",
-    labels: { colors: "#6b7280" },
-    markers: { size: 6 },
-    itemMargin: { vertical: 4 },
-  },
-  dataLabels: { enabled: false },
-  stroke: { show: false },
-  tooltip: { style: { fontFamily: "var(--font-inter), Inter, sans-serif" } },
-};
-
-const donutSeries = [55, 30, 15];
+    legend: {
+      position: "bottom",
+      labels: { colors: "#6b7280" },
+      markers: { size: 6 },
+      itemMargin: { vertical: 4 },
+    },
+    dataLabels: { enabled: false },
+    stroke: { show: false },
+    tooltip: { style: { fontFamily: "var(--font-inter), Inter, sans-serif" } },
+  };
+}
 
 function radialOptions(color: string, label: string): ApexOptions {
   return {
@@ -178,7 +178,7 @@ function StatCard({ label, value, bg }: { label: string; value: number; bg: stri
 
 // ── AdminPanel ────────────────────────────────────────────────────────────────
 
-type DashboardStats = { properties: number; agents: number; users: number };
+type DashboardStats = { properties: number; agents: number; users: number; forSale: number; forRent: number };
 
 export default function AdminPanel() {
   const [tab,    setTab]    = useState<"dashboard" | "user-management">("dashboard");
@@ -280,7 +280,13 @@ export default function AdminPanel() {
               <Settings className="w-4 h-4 text-gray-400" />
             </button>
           </div>
-          <Chart type="donut" series={donutSeries} options={donutOptions} height={280} width="100%" />
+          <Chart
+            type="donut"
+            series={[stats?.forSale ?? 0, stats?.forRent ?? 0]}
+            options={buildDonutOptions(stats?.properties ?? 0)}
+            height={280}
+            width="100%"
+          />
         </div>
       </div>
 
