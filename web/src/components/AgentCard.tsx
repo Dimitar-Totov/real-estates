@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Trash2, AlertTriangle, MessageSquarePlus } from "lucide-react";
 import CommentModal from "@/components/CommentModal";
+import AgentReviewsModal from "@/components/AgentReviewsModal";
 
 interface Agent {
   id: string;
@@ -129,7 +130,7 @@ function StarRating({
               <button
                 key={star}
                 disabled={loading}
-                onClick={() => submit(star)}
+                onClick={(e) => { e.stopPropagation(); submit(star); }}
                 onMouseEnter={() => setHovered(star)}
                 onMouseLeave={() => setHovered(null)}
                 className="focus:outline-none disabled:opacity-50 transition-transform hover:scale-110 active:scale-95"
@@ -177,7 +178,8 @@ export default function AgentCard({
   const [agent, setAgent]           = useState(initialAgent);
   const [confirming, setConfirming] = useState(false);
   const [removing, setRemoving]     = useState(false);
-  const [commentOpen, setCommentOpen] = useState(false);
+  const [commentOpen, setCommentOpen]   = useState(false);
+  const [reviewsOpen, setReviewsOpen]   = useState(false);
   const [savedComment, setSavedComment] = useState<string | null>(myComment);
 
   const handleDelete = () => {
@@ -196,7 +198,10 @@ export default function AgentCard({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-default group">
+    <div
+      className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer group"
+      onClick={() => setReviewsOpen(true)}
+    >
       {/* Agent Image */}
       <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center overflow-hidden">
         {agent.image ? (
@@ -363,6 +368,16 @@ export default function AgentCard({
           existingComment={savedComment}
           onClose={() => setCommentOpen(false)}
           onSaved={(c) => setSavedComment(c)}
+        />
+      )}
+
+      {reviewsOpen && (
+        <AgentReviewsModal
+          agentId={agent.id}
+          agentName={agent.name}
+          agentImage={agent.image}
+          reviewCount={agent.reviews}
+          onClose={() => setReviewsOpen(false)}
         />
       )}
     </div>
