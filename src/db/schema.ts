@@ -249,3 +249,19 @@ export const soldProperties = pgTable("sold_properties", {
 
 export type SoldProperty = typeof soldProperties.$inferSelect;
 export type NewSoldProperty = typeof soldProperties.$inferInsert;
+
+export const agentCandidates = pgTable("agent_candidates", {
+  id:               serial("id").primaryKey(),
+  userId:           integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  username:         text("username").notNull(),
+  personalInfo:     text("personal_info"),
+  education:        text("education"),
+  workExperience:   text("work_experience"),
+  skills:           text("skills"),
+  availability:     text("availability"),
+  createdAt:        timestamp("created_at").defaultNow().notNull(),
+  updatedAt:        timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type AgentCandidate = typeof agentCandidates.$inferSelect;
+export type NewAgentCandidate = typeof agentCandidates.$inferInsert;

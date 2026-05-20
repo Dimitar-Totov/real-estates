@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Download, Search, Settings } from "lucide-react";
+import { Download, Search, Settings, Menu, X, LayoutDashboard, Users, UserCheck } from "lucide-react";
 import UserManagement from "@/components/UserManagement";
+import AgentCandidatesView from "@/components/AgentCandidatesView";
 import type { ApexOptions } from "apexcharts";
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -179,8 +180,9 @@ type MonthlyData = { year: number; sold: number[]; rented: number[]; listed: num
 const ZERO_12 = Array(12).fill(0);
 
 export default function AdminPanel() {
-  const [tab,         setTab]         = useState<"dashboard" | "user-management">("dashboard");
+  const [tab,         setTab]         = useState<"dashboard" | "user-management" | "agent-candidates">("dashboard");
   const [show,        setShow]        = useState(false);
+  const [drawerOpen,  setDrawerOpen]  = useState(false);
   const [period,      setPeriod]      = useState<"lifetime" | "monthly">("lifetime");
   const [search,      setSearch]      = useState("");
   const [stats,       setStats]       = useState<DashboardStats | null>(null);
@@ -219,13 +221,17 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontFamily: "var(--font-inter), Inter, sans-serif" }}>
+      <style>{`@keyframes ap-fade { from { opacity:0 } to { opacity:1 } }`}</style>
 
       {/* ── Tab switcher ───────────────────────────────────────────────────── */}
-      <div className="flex justify-center py-5 border-b border-gray-200 bg-white">
+
+      {/* Desktop pill tabs */}
+      <div className="hidden sm:flex justify-center py-5 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-1.5 bg-gray-100 rounded-2xl p-1.5" style={{ fontFamily: "var(--font-poppins), Poppins, sans-serif" }}>
           {([
-            { key: "dashboard",       label: "Dashboard" },
-            { key: "user-management", label: "User Management" },
+            { key: "dashboard",        label: "Dashboard" },
+            { key: "user-management",  label: "User Management" },
+            { key: "agent-candidates", label: "Agent Candidates" },
           ] as const).map(({ key, label }) => (
             <button
               key={key}
@@ -243,8 +249,80 @@ export default function AdminPanel() {
         </div>
       </div>
 
+      {/* Mobile top bar */}
+      <div className="sm:hidden flex items-center justify-between px-4 py-4 border-b border-gray-200 bg-white">
+        <span className="font-bold text-base" style={{ color: NAVY, fontFamily: "var(--font-poppins), Poppins, sans-serif" }}>
+          {tab === "dashboard" ? "Dashboard" : tab === "user-management" ? "User Management" : "Agent Candidates"}
+        </span>
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 text-gray-600 active:scale-95 transition-transform"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Mobile drawer backdrop */}
+      {drawerOpen && (
+        <div
+          className="sm:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+          style={{ animation: "ap-fade 0.2s ease both" }}
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <div
+        className="sm:hidden fixed top-0 right-0 h-full z-50 bg-white shadow-2xl flex flex-col"
+        style={{
+          width: 270,
+          transform: drawerOpen ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 0.32s cubic-bezier(0.22,1,0.36,1)",
+          fontFamily: "var(--font-poppins), Poppins, sans-serif",
+        }}
+      >
+        {/* Drawer header */}
+        <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
+          <span className="font-extrabold text-base" style={{ color: NAVY }}>Admin Panel</span>
+          <button
+            onClick={() => setDrawerOpen(false)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 active:scale-95 transition-transform"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Drawer nav items */}
+        <nav className="flex flex-col gap-1 p-3 flex-1">
+          {([
+            { key: "dashboard",        label: "Dashboard",        Icon: LayoutDashboard },
+            { key: "user-management",  label: "User Management",  Icon: Users           },
+            { key: "agent-candidates", label: "Agent Candidates", Icon: UserCheck        },
+          ] as const).map(({ key, label, Icon }) => {
+            const active = tab === key;
+            return (
+              <button
+                key={key}
+                onClick={() => { setTab(key); setDrawerOpen(false); }}
+                className="flex items-center gap-3 w-full px-4 py-3.5 rounded-xl text-sm font-semibold text-left transition-all duration-200 active:scale-[0.97]"
+                style={
+                  active
+                    ? { backgroundColor: NAVY, color: "white", boxShadow: "0 4px 14px rgba(30,58,95,0.25)" }
+                    : { color: "#6b7280" }
+                }
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                {label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
       {/* ── Content ────────────────────────────────────────────────────────── */}
-      {tab === "user-management" ? <UserManagement /> : (
+      {tab === "user-management" ? <UserManagement /> : tab === "agent-candidates" ? (
+        <AgentCandidatesView />
+      ) : (
       <div className="p-4 sm:p-6 lg:p-8">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
