@@ -20,6 +20,12 @@ function isPastHour(date: Date, hour: number): boolean {
   return hour <= new Date().getHours();
 }
 
+function isVisitExpired(visitDate: string, hour: number): boolean {
+  const d = new Date(visitDate);
+  const visitAt = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hour, 0, 0, 0);
+  return visitAt < new Date();
+}
+
 function isWeekday(date: Date) {
   const day = date.getDay();
   return day !== 0 && day !== 6;
@@ -172,6 +178,8 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
   const [visiting, setVisiting] = useState<VisitingState>(null);
   const [busySlots, setBusySlots] = useState<BusySlot[]>([]);
   const [hoveredBusyHour, setHoveredBusyHour] = useState<number | null>(null);
+  const [clearing, setClearing] = useState(false);
+  const [clearError, setClearError] = useState(false);
 
   const busySet = useMemo(() => {
     const s = new Set<string>();
@@ -215,6 +223,25 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
       if (firstValid !== undefined) setSelectedHour(firstValid);
     }
   }, [selectedDateIdx, selectedDate, selectedHour, busySet]);
+
+  async function handleClearExpired() {
+    if (!visiting) return;
+    setClearing(true);
+    setClearError(false);
+    try {
+      const res = await fetch(`/api/visitings/${visiting.visitingId}`, { method: "DELETE" });
+      if (res.ok) {
+        setVisiting(null);
+        fetchBusySlots();
+      } else {
+        setClearError(true);
+      }
+    } catch {
+      setClearError(true);
+    } finally {
+      setClearing(false);
+    }
+  }
 
   async function handleRequestShowing() {
     setBookingStatus("loading");
@@ -322,6 +349,65 @@ export default function TourBookingCard({ propertyId }: { propertyId: number }) 
   // ── Pending state ────────────────────────────────────────────────
   if (visiting?.status === "pending") {
     const displayDate = new Date(visiting.visitDate);
+    const expired = isVisitExpired(visiting.visitDate, visiting.hour);
+
+    if (expired) {
+      return (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden mb-4">
+          <div className="bg-gradient-to-br from-slate-500 to-slate-600 px-6 py-5 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-200">Expired</p>
+              <h3 className="text-xl font-bold text-white leading-tight">Request Expired</h3>
+            </div>
+          </div>
+          <div className="px-6 py-5 space-y-4">
+            <p className="text-sm text-gray-500 leading-relaxed">
+              The scheduled visit time passed without a response from the agent.
+            </p>
+            <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+              <svg className="w-5 h-5 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold text-slate-500 line-through">{formatFullDate(displayDate)}</p>
+                <p className="text-xs text-slate-400 mt-0.5 line-through">{formatHour(visiting.hour)}</p>
+              </div>
+            </div>
+            {clearError && (
+              <p className="text-xs text-red-500">Something went wrong. Please try again.</p>
+            )}
+            <button
+              onClick={handleClearExpired}
+              disabled={clearing}
+              className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-800 active:bg-slate-900 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm tracking-wide transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              {clearing ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Clearing…
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                  </svg>
+                  Choose New Date
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-white rounded-2xl border border-amber-200 shadow-lg overflow-hidden mb-4">
         <div className="bg-gradient-to-br from-amber-400 to-amber-500 px-6 py-5 flex items-center gap-4">

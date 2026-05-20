@@ -12,6 +12,40 @@ import {
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const token = req.cookies.get("token")?.value;
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  let payload;
+  try {
+    payload = verifyToken(token);
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const visitingId = Number(id);
+  if (!visitingId) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+
+  const [visiting] = await db
+    .select({ id: propertyVisitings.id, userId: propertyVisitings.userId, status: propertyVisitings.status })
+    .from(propertyVisitings)
+    .where(and(eq(propertyVisitings.id, visitingId), eq(propertyVisitings.userId, payload.id)))
+    .limit(1);
+
+  if (!visiting) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (visiting.status !== "pending") {
+    return NextResponse.json({ error: "Only pending requests can be cleared" }, { status: 409 });
+  }
+
+  await db.delete(propertyVisitings).where(eq(propertyVisitings.id, visitingId));
+
+  return NextResponse.json({ deleted: true });
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
