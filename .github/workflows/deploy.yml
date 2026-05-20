@@ -8,24 +8,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: web
-
       - name: Install Netlify CLI
         run: npm install -g netlify-cli
 
-      - name: Build and deploy
-        run: netlify deploy --build --prod --skip-functions-cache
-        working-directory: web
+      - name: Trigger build on Netlify
+        run: netlify deploy --trigger --prod --auth "$NETLIFY_AUTH_TOKEN" --site "5ca54cf9-41ef-497b-abe4-e3d9e6d8a482"
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
