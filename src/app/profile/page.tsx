@@ -138,11 +138,11 @@ export default function ProfileRoute() {
     }
   };
 
-  const handleMarkSold = async (meetingId: number, propertyName: string, buyer: string) => {
+  const handleMarkSold = async (meetingId: number, propertyName: string, buyer: string, transactionType: "bought" | "rented") => {
     const res = await fetch("/api/meetings/sold", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ meetingId, propertyName, buyer }),
+      body: JSON.stringify({ meetingId, propertyName, buyer, transactionType }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));

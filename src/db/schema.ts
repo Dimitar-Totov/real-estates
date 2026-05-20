@@ -236,12 +236,15 @@ export const feedItems = pgTable("feed_items", {
 export type FeedItem = typeof feedItems.$inferSelect;
 export type NewFeedItem = typeof feedItems.$inferInsert;
 
+export const transactionTypeEnum = pgEnum("transaction_type", ["bought", "rented"]);
+
 export const soldProperties = pgTable("sold_properties", {
-  id:           serial("id").primaryKey(),
-  propertyName: text("property_name").notNull(),
-  agent:        text("agent").notNull(),
-  buyer:        text("buyer").notNull(),
-  dateOfBuying: timestamp("dateof_buying").notNull(),
+  id:              serial("id").primaryKey(),
+  propertyName:    text("property_name").notNull(),
+  agent:           text("agent").notNull(),
+  buyer:           text("buyer").notNull(),
+  transactionType: transactionTypeEnum("transaction_type").notNull().default("bought"),
+  dateOfBuying:    timestamp("dateof_buying").notNull(),
 });
 
 export type SoldProperty = typeof soldProperties.$inferSelect;

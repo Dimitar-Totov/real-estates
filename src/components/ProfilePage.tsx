@@ -68,7 +68,7 @@ interface ProfilePageProps {
   onContactChange?: (contact: { officePhone: string; mobilePhone: string; email: string }) => Promise<void>;
   onAcceptVisiting?: (visitingId: number) => Promise<void>;
   onDeclineVisiting?: (visitingId: number) => Promise<void>;
-  onMarkSold?: (meetingId: number, propertyName: string, buyer: string) => Promise<void>;
+  onMarkSold?: (meetingId: number, propertyName: string, buyer: string, transactionType: "bought" | "rented") => Promise<void>;
 }
 
 export default function ProfilePage({
@@ -189,6 +189,7 @@ export default function ProfilePage({
   // Sold state per meeting: "idle" | "prompting" | "loading" | "done"
   const [soldState, setSoldState] = useState<Record<number, "prompting" | "loading" | "done">>({});
   const [buyerInputs, setBuyerInputs] = useState<Record<number, string>>({});
+  const [txTypeInputs, setTxTypeInputs] = useState<Record<number, "bought" | "rented">>({});
 
   const fetchMeetingsPage = useCallback(async (page: number) => {
     if (!onFetchMeetings) return;
@@ -649,12 +650,13 @@ export default function ProfilePage({
                     const timeLabel = formatHour(d.getHours());
                     const mSold = soldState[meeting.id];
                     const buyer = buyerInputs[meeting.id] ?? "";
+                    const txType = txTypeInputs[meeting.id] ?? "bought";
 
                     const handleSoldConfirm = async () => {
                       if (!onMarkSold || !buyer.trim()) return;
                       setSoldState((s) => ({ ...s, [meeting.id]: "loading" }));
                       try {
-                        await onMarkSold(meeting.id, meeting.propertyTitle, buyer.trim());
+                        await onMarkSold(meeting.id, meeting.propertyTitle, buyer.trim(), txType);
                         setSoldState((s) => ({ ...s, [meeting.id]: "done" }));
                       } catch {
                         setSoldState((s) => { const n = { ...s }; delete n[meeting.id]; return n; });
@@ -688,30 +690,36 @@ export default function ProfilePage({
                                   <Check className="w-3.5 h-3.5" /> Sold
                                 </span>
                               ) : mSold === "prompting" || mSold === "loading" ? (
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="text"
-                                    placeholder="Buyer name"
-                                    value={buyer}
-                                    onChange={(e) => setBuyerInputs((b) => ({ ...b, [meeting.id]: e.target.value }))}
-                                    className="h-9 flex-1 rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                                    disabled={mSold === "loading"}
-                                  />
-                                  <button
-                                    onClick={handleSoldConfirm}
-                                    disabled={mSold === "loading" || !buyer.trim()}
-                                    className="h-9 px-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
-                                  >
-                                    {mSold === "loading" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                                    Confirm
-                                  </button>
-                                  <button
-                                    onClick={() => setSoldState((s) => { const n = { ...s }; delete n[meeting.id]; return n; })}
-                                    disabled={mSold === "loading"}
-                                    className="h-9 w-9 rounded-lg border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex rounded-lg overflow-hidden border border-gray-300 w-fit">
+                                    <button onClick={() => setTxTypeInputs((t) => ({ ...t, [meeting.id]: "bought" }))} disabled={mSold === "loading"} className={`px-3 h-8 text-xs font-semibold transition-colors ${txType === "bought" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>Bought</button>
+                                    <button onClick={() => setTxTypeInputs((t) => ({ ...t, [meeting.id]: "rented" }))} disabled={mSold === "loading"} className={`px-3 h-8 text-xs font-semibold transition-colors border-l border-gray-300 ${txType === "rented" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>Rented</button>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      placeholder={txType === "rented" ? "Tenant name" : "Buyer name"}
+                                      value={buyer}
+                                      onChange={(e) => setBuyerInputs((b) => ({ ...b, [meeting.id]: e.target.value }))}
+                                      className="h-9 flex-1 rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                      disabled={mSold === "loading"}
+                                    />
+                                    <button
+                                      onClick={handleSoldConfirm}
+                                      disabled={mSold === "loading" || !buyer.trim()}
+                                      className="h-9 px-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                                    >
+                                      {mSold === "loading" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                      Confirm
+                                    </button>
+                                    <button
+                                      onClick={() => setSoldState((s) => { const n = { ...s }; delete n[meeting.id]; return n; })}
+                                      disabled={mSold === "loading"}
+                                      className="h-9 w-9 rounded-lg border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
                               ) : (
                                 <button
@@ -751,31 +759,37 @@ export default function ProfilePage({
                                   <Check className="w-3.5 h-3.5" /> Sold
                                 </span>
                               ) : mSold === "prompting" || mSold === "loading" ? (
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="text"
-                                    placeholder="Buyer name"
-                                    value={buyer}
-                                    onChange={(e) => setBuyerInputs((b) => ({ ...b, [meeting.id]: e.target.value }))}
-                                    className="h-9 w-40 rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                                    disabled={mSold === "loading"}
-                                    autoFocus
-                                  />
-                                  <button
-                                    onClick={handleSoldConfirm}
-                                    disabled={mSold === "loading" || !buyer.trim()}
-                                    className="h-9 px-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
-                                  >
-                                    {mSold === "loading" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                                    Confirm
-                                  </button>
-                                  <button
-                                    onClick={() => setSoldState((s) => { const n = { ...s }; delete n[meeting.id]; return n; })}
-                                    disabled={mSold === "loading"}
-                                    className="h-9 w-9 rounded-lg border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex rounded-lg overflow-hidden border border-gray-300 w-fit">
+                                    <button onClick={() => setTxTypeInputs((t) => ({ ...t, [meeting.id]: "bought" }))} disabled={mSold === "loading"} className={`px-3 h-8 text-xs font-semibold transition-colors ${txType === "bought" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>Bought</button>
+                                    <button onClick={() => setTxTypeInputs((t) => ({ ...t, [meeting.id]: "rented" }))} disabled={mSold === "loading"} className={`px-3 h-8 text-xs font-semibold transition-colors border-l border-gray-300 ${txType === "rented" ? "bg-indigo-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>Rented</button>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      placeholder={txType === "rented" ? "Tenant name" : "Buyer name"}
+                                      value={buyer}
+                                      onChange={(e) => setBuyerInputs((b) => ({ ...b, [meeting.id]: e.target.value }))}
+                                      className="h-9 w-40 rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                      disabled={mSold === "loading"}
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={handleSoldConfirm}
+                                      disabled={mSold === "loading" || !buyer.trim()}
+                                      className="h-9 px-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                                    >
+                                      {mSold === "loading" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                      Confirm
+                                    </button>
+                                    <button
+                                      onClick={() => setSoldState((s) => { const n = { ...s }; delete n[meeting.id]; return n; })}
+                                      disabled={mSold === "loading"}
+                                      className="h-9 w-9 rounded-lg border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
                               ) : (
                                 <button

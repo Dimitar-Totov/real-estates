@@ -28,7 +28,12 @@ export async function POST(req: NextRequest) {
   if (!agent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
 
   const body = await req.json();
-  const { meetingId, propertyName, buyer } = body as { meetingId?: number; propertyName?: string; buyer?: string };
+  const { meetingId, propertyName, buyer, transactionType } = body as {
+    meetingId?: number;
+    propertyName?: string;
+    buyer?: string;
+    transactionType?: "bought" | "rented";
+  };
 
   if (!propertyName || !buyer) {
     return NextResponse.json({ error: "propertyName and buyer are required" }, { status: 400 });
@@ -42,6 +47,7 @@ export async function POST(req: NextRequest) {
       propertyName,
       agent: payload.username ?? String(payload.id),
       buyer,
+      transactionType: transactionType === "rented" ? "rented" : "bought",
       dateOfBuying: now,
     })
     .returning();
