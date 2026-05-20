@@ -50,11 +50,6 @@ const areaOptions: ApexOptions = {
   dataLabels: { enabled: false },
 };
 
-const areaSeries = [
-  { name: "Sold",   data: [45,  62,  38,  75,  55,  89,  95,  72, 108,  85, 120, 110] },
-  { name: "Rented", data: [30,  28,  42,  38,  52,  45,  60,  55,  70,  62,  80,  75] },
-  { name: "Listed", data: [80,  95,  72, 110,  88, 130, 145, 118, 160, 130, 180, 165] },
-];
 
 function buildDonutOptions(total: number): ApexOptions {
   return {
@@ -179,13 +174,17 @@ function StatCard({ label, value, bg }: { label: string; value: number; bg: stri
 // ── AdminPanel ────────────────────────────────────────────────────────────────
 
 type DashboardStats = { properties: number; agents: number; users: number; forSale: number; forRent: number };
+type MonthlyData = { year: number; sold: number[]; rented: number[]; listed: number[] };
+
+const ZERO_12 = Array(12).fill(0);
 
 export default function AdminPanel() {
-  const [tab,    setTab]    = useState<"dashboard" | "user-management">("dashboard");
-  const [show,   setShow]   = useState(false);
-  const [period, setPeriod] = useState<"lifetime" | "monthly">("lifetime");
-  const [search, setSearch] = useState("");
-  const [stats,  setStats]  = useState<DashboardStats | null>(null);
+  const [tab,         setTab]         = useState<"dashboard" | "user-management">("dashboard");
+  const [show,        setShow]        = useState(false);
+  const [period,      setPeriod]      = useState<"lifetime" | "monthly">("lifetime");
+  const [search,      setSearch]      = useState("");
+  const [stats,       setStats]       = useState<DashboardStats | null>(null);
+  const [monthlyData, setMonthlyData] = useState<MonthlyData | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setShow(true), 80);
@@ -198,6 +197,19 @@ export default function AdminPanel() {
       .then((data) => { if (data) setStats(data); })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetch("/api/admin/monthly-properties")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data) setMonthlyData(data); })
+      .catch(() => {});
+  }, []);
+
+  const areaSeries = [
+    { name: "Sold",   data: monthlyData?.sold   ?? ZERO_12 },
+    { name: "Rented", data: monthlyData?.rented  ?? ZERO_12 },
+    { name: "Listed", data: monthlyData?.listed  ?? ZERO_12 },
+  ];
 
   const fadeSlide = (delay: number) => ({
     opacity:    show ? 1 : 0,
@@ -264,7 +276,7 @@ export default function AdminPanel() {
         <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300" style={fadeSlide(0.1)}>
           <div className="mb-2">
             <h2 className="text-base font-bold text-gray-800">Monthly Properties</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Full year overview — 2025</p>
+            <p className="text-xs text-gray-400 mt-0.5">Full year overview — {monthlyData?.year ?? new Date().getFullYear()}</p>
           </div>
           <Chart type="area" series={areaSeries} options={areaOptions} height={260} width="100%" />
         </div>
