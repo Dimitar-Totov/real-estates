@@ -55,9 +55,10 @@ export async function POST(request: NextRequest) {
         .from(agents)
         .where(eq(agents.userId, auth.id));
 
+      const priceWithFee = (Number(propertyData.price) * 1.03).toFixed(2);
       const [created] = await db
         .insert(properties)
-        .values({ ...(propertyData as NewProperty), listedByAgentId: agentRow?.id ?? null })
+        .values({ ...(propertyData as NewProperty), price: priceWithFee, listedByAgentId: agentRow?.id ?? null })
         .returning();
       return NextResponse.json(created, { status: 201 });
     }
@@ -80,13 +81,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Agent not found" }, { status: 400 });
     }
 
+    const priceWithFee = (Number(propertyData.price) * 1.03).toFixed(2);
+    const propertyDataWithFee = { ...propertyData, price: priceWithFee };
+
     // 1. Store property data as pending — nothing goes into properties table yet
     const [pending] = await db
       .insert(pendingListings)
       .values({
         agentId: agent.id,
         submittedBy: auth?.id ?? undefined,
-        propertyData: propertyData,
+        propertyData: propertyDataWithFee,
       })
       .returning();
 
@@ -100,7 +104,7 @@ export async function POST(request: NextRequest) {
         `Title:        ${propertyData.title}`,
         `Type:         ${propertyData.type}`,
         `Status:       ${String(propertyData.status).replace(/_/g, " ")}`,
-        `Price:        $${Number(propertyData.price).toLocaleString()}`,
+        `Price:        $${Number(priceWithFee).toLocaleString()} (incl. 3% agent fee)`,
         "",
         `Address:      ${propertyData.address}`,
         `City:         ${propertyData.city}, ${propertyData.state} ${propertyData.zipCode}`,

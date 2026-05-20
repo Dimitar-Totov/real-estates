@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import AgentCard from "@/components/AgentCard";
 import AgentFilters from "@/components/AgentFilters";
 import SendMessageModal, { type MessageSender } from "@/components/SendMessageModal";
@@ -20,7 +21,13 @@ export interface AgentRow {
   email: string;
 }
 
-export default function AgentsSearchView({ agents: initial }: { agents: AgentRow[] }) {
+export default function AgentsSearchView({
+  agents: initial,
+  sortByRating = false,
+}: {
+  agents: AgentRow[];
+  sortByRating?: boolean;
+}) {
   const [agents, setAgents] = useState(initial);
   const [filters, setFilters] = useState({
     specialties: [] as string[],
@@ -38,6 +45,7 @@ export default function AgentsSearchView({ agents: initial }: { agents: AgentRow
   );
 
   const [messageTarget, setMessageTarget]   = useState<AgentRow | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [sender, setSender]                 = useState<MessageSender | null>(null);
   const [isAdmin, setIsAdmin]               = useState(false);
   const [canRate, setCanRate]               = useState(false);
@@ -149,8 +157,22 @@ export default function AgentsSearchView({ agents: initial }: { agents: AgentRow
                 {filteredAgents.length} Agent
                 {filteredAgents.length !== 1 ? "s" : ""} Found
               </h2>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Showing {filteredAgents.length} of {agents.length} agents
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500 dark:text-gray-400">Sort by:</span>
+                <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm font-medium">
+                  <Link
+                    href="/agents"
+                    className={`px-3 py-1.5 transition-colors ${!sortByRating ? "bg-blue-600 text-white" : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                  >
+                    Newest
+                  </Link>
+                  <Link
+                    href="/agents?sort=rating"
+                    className={`px-3 py-1.5 transition-colors ${sortByRating ? "bg-blue-600 text-white" : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                  >
+                    Top Rated
+                  </Link>
+                </div>
               </div>
             </div>
 
@@ -174,7 +196,7 @@ export default function AgentsSearchView({ agents: initial }: { agents: AgentRow
                     myRating={myRatings[agent.id] ?? null}
                     myComment={myComments[agent.id] ?? null}
                     onDelete={handleDelete}
-                    onEmail={() => setMessageTarget(agent)}
+                    onEmail={() => sender ? setMessageTarget(agent) : setShowLoginPrompt(true)}
                   />
                 ))}
               </div>
@@ -189,6 +211,36 @@ export default function AgentsSearchView({ agents: initial }: { agents: AgentRow
           receiver={{ id: messageTarget.userId!, name: messageTarget.name }}
           onClose={() => setMessageTarget(null)}
         />
+      )}
+
+      {showLoginPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center">
+            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/30 mx-auto mb-5">
+              <svg className="w-7 h-7 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Login Required</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              You need to be logged in to contact an agent.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLoginPrompt(false)}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <Link
+                href="/auth"
+                className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium text-white transition-colors text-center"
+              >
+                Log In
+              </Link>
+            </div>
+          </div>
+        </div>
       )}
 
       {showApplyModal && sender && (
