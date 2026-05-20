@@ -116,20 +116,27 @@ function ListingCard({ item }: { item: FeedItemRow }) {
 
 function AgentActivityCard({ item }: { item: FeedItemRow }) {
   const c = item.content;
+  const isSale = !!c.isSale;
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border p-4 sm:p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 ${isSale ? "border-emerald-200 dark:border-emerald-800" : "border-gray-100 dark:border-gray-700"}`}>
       <div className="flex items-start justify-between mb-3">
         <span className="text-xs text-gray-400 dark:text-gray-500">{formatDate(item.createdAt)}</span>
-        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
-          Agent Activity
-        </span>
+        {isSale ? (
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+            Property Sold
+          </span>
+        ) : (
+          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+            Agent Activity
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-3">
         {c.agentImage ? (
-          <img src={c.agentImage} alt={c.agent} className="w-11 h-11 rounded-full object-cover flex-shrink-0 ring-2 ring-purple-100 dark:ring-purple-900" />
+          <img src={c.agentImage} alt={c.agent} className={`w-11 h-11 rounded-full object-cover flex-shrink-0 ring-2 ${isSale ? "ring-emerald-100 dark:ring-emerald-900" : "ring-purple-100 dark:ring-purple-900"}`} />
         ) : (
-          <div className="w-11 h-11 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-bold text-purple-600 dark:text-purple-300">{c.agent?.[0] ?? "?"}</span>
+          <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${isSale ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-purple-100 dark:bg-purple-900/40"}`}>
+            <span className={`text-sm font-bold ${isSale ? "text-emerald-600 dark:text-emerald-300" : "text-purple-600 dark:text-purple-300"}`}>{c.agent?.[0] ?? "?"}</span>
           </div>
         )}
         <div className="flex-1 min-w-0">
@@ -138,18 +145,24 @@ function AgentActivityCard({ item }: { item: FeedItemRow }) {
             <span className="text-gray-500 dark:text-gray-400">{c.action}</span>
           </p>
           <p className="text-sm font-semibold text-gray-900 dark:text-white mt-0.5 truncate">{c.property}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1 flex-wrap">
-            {c.price && <span>{c.price}</span>}
-            {c.price && c.location && <span>·</span>}
-            {c.location && (
-              <span className="flex items-center gap-0.5">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                </svg>
-                {c.location}
-              </span>
-            )}
-          </p>
+          {isSale ? (
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
+              Buyer: {c.buyer}
+            </p>
+          ) : (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1 flex-wrap">
+              {c.price && <span>{c.price}</span>}
+              {c.price && c.location && <span>·</span>}
+              {c.location && (
+                <span className="flex items-center gap-0.5">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                  </svg>
+                  {c.location}
+                </span>
+              )}
+            </p>
+          )}
         </div>
       </div>
     </div>

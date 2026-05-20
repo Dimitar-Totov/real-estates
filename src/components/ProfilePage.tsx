@@ -68,6 +68,7 @@ interface ProfilePageProps {
   onContactChange?: (contact: { officePhone: string; mobilePhone: string; email: string }) => Promise<void>;
   onAcceptVisiting?: (visitingId: number) => Promise<void>;
   onDeclineVisiting?: (visitingId: number) => Promise<void>;
+  onMarkSold?: (meetingId: number, propertyName: string, buyer: string) => Promise<void>;
 }
 
 export default function ProfilePage({
@@ -89,6 +90,7 @@ export default function ProfilePage({
   onContactChange,
   onAcceptVisiting,
   onDeclineVisiting,
+  onMarkSold,
 }: ProfilePageProps) {
   const [listings, setListings] = useState<ListingRow[]>(listingsProp);
   useEffect(() => { setListings(listingsProp); }, [listingsProp]);
@@ -184,6 +186,10 @@ export default function ProfilePage({
   const [meetingsLoading, setMeetingsLoading] = useState(false);
   const meetingsTotalPages = Math.ceil(meetingsTotal / 5);
 
+  // Sold state per meeting: "idle" | "prompting" | "loading" | "done"
+  const [soldState, setSoldState] = useState<Record<number, "prompting" | "loading" | "done">>({});
+  const [buyerInputs, setBuyerInputs] = useState<Record<number, string>>({});
+
   const fetchMeetingsPage = useCallback(async (page: number) => {
     if (!onFetchMeetings) return;
     setMeetingsLoading(true);
@@ -192,6 +198,13 @@ export default function ProfilePage({
       setMeetingsList(rows);
       setMeetingsTotal(total);
       setMeetingsPage(page);
+      setSoldState((prev) => {
+        const next = { ...prev };
+        for (const m of rows) {
+          if (m.markedSoldAt) next[m.id] = "done";
+        }
+        return next;
+      });
     } finally {
       setMeetingsLoading(false);
     }
@@ -634,6 +647,20 @@ export default function ProfilePage({
                     const d = new Date(meeting.meetingDate);
                     const dateLabel = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
                     const timeLabel = formatHour(d.getHours());
+                    const mSold = soldState[meeting.id];
+                    const buyer = buyerInputs[meeting.id] ?? "";
+
+                    const handleSoldConfirm = async () => {
+                      if (!onMarkSold || !buyer.trim()) return;
+                      setSoldState((s) => ({ ...s, [meeting.id]: "loading" }));
+                      try {
+                        await onMarkSold(meeting.id, meeting.propertyTitle, buyer.trim());
+                        setSoldState((s) => ({ ...s, [meeting.id]: "done" }));
+                      } catch {
+                        setSoldState((s) => { const n = { ...s }; delete n[meeting.id]; return n; });
+                      }
+                    };
+
                     return (
                       <div key={meeting.id} className="py-5 border-b border-gray-300 last:border-b-0 px-4 sm:px-6">
                         {/* Mobile: stacked */}
@@ -654,25 +681,112 @@ export default function ProfilePage({
                             <Mail className="w-4 h-4 text-gray-400 shrink-0" />
                             {meeting.requesterEmail ?? <span className="text-gray-300">—</span>}
                           </span>
+                          {onMarkSold && (
+                            <div className="mt-1">
+                              {mSold === "done" ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700">
+                                  <Check className="w-3.5 h-3.5" /> Sold
+                                </span>
+                              ) : mSold === "prompting" || mSold === "loading" ? (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Buyer name"
+                                    value={buyer}
+                                    onChange={(e) => setBuyerInputs((b) => ({ ...b, [meeting.id]: e.target.value }))}
+                                    className="h-9 flex-1 rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                    disabled={mSold === "loading"}
+                                  />
+                                  <button
+                                    onClick={handleSoldConfirm}
+                                    disabled={mSold === "loading" || !buyer.trim()}
+                                    className="h-9 px-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                                  >
+                                    {mSold === "loading" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={() => setSoldState((s) => { const n = { ...s }; delete n[meeting.id]; return n; })}
+                                    disabled={mSold === "loading"}
+                                    className="h-9 w-9 rounded-lg border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setSoldState((s) => ({ ...s, [meeting.id]: "prompting" }))}
+                                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md hover:shadow-lg hover:from-violet-700 hover:to-indigo-700 active:scale-95 transition-all duration-150"
+                                >
+                                  <Check className="w-4 h-4" /> Sold
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                         {/* Desktop: aligned grid */}
-                        <div className="hidden lg:grid items-center mx-auto" style={{ gridTemplateColumns: "11rem 8rem 12rem 14rem 10rem 1fr", width: "fit-content", gap: "0 3rem" }}>
-                          <span className="text-base font-semibold text-indigo-600 whitespace-nowrap">{dateLabel} · {timeLabel}</span>
-                          <span className="flex items-center gap-2 text-base font-medium text-gray-800 truncate">
-                            <User className="w-4 h-4 text-gray-400 shrink-0" />{meeting.requesterUsername}
-                          </span>
-                          <span className="text-base font-medium text-gray-700 truncate">{meeting.propertyTitle}</span>
-                          <span className="flex items-center gap-2 text-base text-gray-500 truncate">
-                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />{meeting.propertyAddress}
-                          </span>
-                          <span className="flex items-center gap-2 text-base text-gray-500 whitespace-nowrap">
-                            <Phone className="w-4 h-4 text-gray-400 shrink-0" />
-                            {meeting.requesterPhone ?? <span className="text-gray-300">—</span>}
-                          </span>
-                          <span className="flex items-center gap-2 text-base text-gray-500 truncate">
-                            <Mail className="w-4 h-4 text-gray-400 shrink-0" />
-                            {meeting.requesterEmail ?? <span className="text-gray-300">—</span>}
-                          </span>
+                        <div className="hidden lg:flex items-center gap-12 flex-wrap">
+                          <div className="grid items-center" style={{ gridTemplateColumns: "11rem 8rem 12rem 14rem 10rem 1fr", gap: "0 3rem" }}>
+                            <span className="text-base font-semibold text-indigo-600 whitespace-nowrap">{dateLabel} · {timeLabel}</span>
+                            <span className="flex items-center gap-2 text-base font-medium text-gray-800 truncate">
+                              <User className="w-4 h-4 text-gray-400 shrink-0" />{meeting.requesterUsername}
+                            </span>
+                            <span className="text-base font-medium text-gray-700 truncate">{meeting.propertyTitle}</span>
+                            <span className="flex items-center gap-2 text-base text-gray-500 truncate">
+                              <MapPin className="w-4 h-4 text-gray-400 shrink-0" />{meeting.propertyAddress}
+                            </span>
+                            <span className="flex items-center gap-2 text-base text-gray-500 whitespace-nowrap">
+                              <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                              {meeting.requesterPhone ?? <span className="text-gray-300">—</span>}
+                            </span>
+                            <span className="flex items-center gap-2 text-base text-gray-500 truncate">
+                              <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                              {meeting.requesterEmail ?? <span className="text-gray-300">—</span>}
+                            </span>
+                          </div>
+                          {onMarkSold && (
+                            <div className="ml-auto shrink-0">
+                              {mSold === "done" ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700">
+                                  <Check className="w-3.5 h-3.5" /> Sold
+                                </span>
+                              ) : mSold === "prompting" || mSold === "loading" ? (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Buyer name"
+                                    value={buyer}
+                                    onChange={(e) => setBuyerInputs((b) => ({ ...b, [meeting.id]: e.target.value }))}
+                                    className="h-9 w-40 rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                    disabled={mSold === "loading"}
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={handleSoldConfirm}
+                                    disabled={mSold === "loading" || !buyer.trim()}
+                                    className="h-9 px-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                                  >
+                                    {mSold === "loading" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={() => setSoldState((s) => { const n = { ...s }; delete n[meeting.id]; return n; })}
+                                    disabled={mSold === "loading"}
+                                    className="h-9 w-9 rounded-lg border border-gray-300 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setSoldState((s) => ({ ...s, [meeting.id]: "prompting" }))}
+                                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md hover:shadow-lg hover:from-violet-700 hover:to-indigo-700 active:scale-95 transition-all duration-150"
+                                >
+                                  <Check className="w-4 h-4" /> Sold
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

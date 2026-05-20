@@ -199,6 +199,7 @@ export const meetings = pgTable("meetings", {
   requesterUsername: text("requester_username").notNull(),
   requesterPhone: text("requester_phone"),
   requesterEmail: text("requester_email"),
+  markedSoldAt: timestamp("marked_sold_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

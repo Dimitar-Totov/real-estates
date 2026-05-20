@@ -138,6 +138,18 @@ export default function ProfileRoute() {
     }
   };
 
+  const handleMarkSold = async (meetingId: number, propertyName: string, buyer: string) => {
+    const res = await fetch("/api/meetings/sold", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meetingId, propertyName, buyer }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error((data as { error?: string }).error ?? "Failed to mark property as sold.");
+    }
+  };
+
   if (!profile) return null;
 
   if (profile.role === "admin") return <AdminPanel />;
@@ -168,6 +180,7 @@ export default function ProfileRoute() {
         onContactChange={handleContactChange}
         onAcceptVisiting={handleAcceptVisiting}
         onDeclineVisiting={handleDeclineVisiting}
+        onMarkSold={handleMarkSold}
       />
     </>
   );

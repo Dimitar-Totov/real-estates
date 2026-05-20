@@ -1,12 +1,12 @@
 import { db } from "@/db";
-import { agents, agentRatings, properties, users } from "@/db/schema";
+import { agents, agentRatings, properties, users, soldProperties } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import FeedView from "@/components/FeedView";
 
 export const dynamic = "force-dynamic";
 
 export default async function FeedPage() {
-  const [recentProperties, recentReviews, recentAgents] = await Promise.all([
+  const [recentProperties, recentReviews, recentAgents, recentSales] = await Promise.all([
     db
       .select({
         id: properties.id,
@@ -64,6 +64,18 @@ export default async function FeedPage() {
       .from(agents)
       .orderBy(desc(agents.createdAt))
       .limit(5),
+
+    db
+      .select({
+        id: soldProperties.id,
+        propertyName: soldProperties.propertyName,
+        agent: soldProperties.agent,
+        buyer: soldProperties.buyer,
+        dateOfBuying: soldProperties.dateOfBuying,
+      })
+      .from(soldProperties)
+      .orderBy(desc(soldProperties.dateOfBuying))
+      .limit(10),
   ]);
 
   type FeedItemRow = {
@@ -143,6 +155,25 @@ export default async function FeedPage() {
         isNewAgent: true,
       },
       createdAt: a.createdAt.toISOString(),
+    });
+  }
+
+  for (const s of recentSales) {
+    const agentRecord = recentAgents.find((a) => a.name === s.agent);
+    items.push({
+      id: s.id + 300000,
+      type: "agent_activity",
+      content: {
+        agent: s.agent,
+        agentImage: agentRecord?.image ?? null,
+        action: "closed a sale on",
+        property: s.propertyName,
+        price: null,
+        location: null,
+        buyer: s.buyer,
+        isSale: true,
+      },
+      createdAt: s.dateOfBuying.toISOString(),
     });
   }
 

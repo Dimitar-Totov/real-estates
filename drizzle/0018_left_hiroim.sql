@@ -1,0 +1,1 @@
+ALTER TABLE "meetings" ADD COLUMN "marked_sold_at" timestamp;
