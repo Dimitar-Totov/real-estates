@@ -15,10 +15,7 @@ export default function ScreensLayout() {
       <Drawer.Screen name="listings/index" options={{ drawerLabel: 'All Properties', title: 'All Properties' }} />
       <Drawer.Screen name="properties/new" options={{ drawerLabel: 'List Your Property', title: 'List Your Property' }} />
       <Drawer.Screen name="agents/index" options={{ drawerLabel: 'Find an Agent', title: 'Find an Agent' }} />
-      <Drawer.Screen name="agents/top-rated" options={{ drawerLabel: 'Top-Rated Agents', title: 'Top-Rated Agents' }} />
-      <Drawer.Screen name="agents/featured" options={{ drawerLabel: 'Featured Agents', title: 'Featured Agents' }} />
       <Drawer.Screen name="feed" options={{ drawerLabel: 'Feed', title: 'Feed' }} />
-      <Drawer.Screen name="messages" options={{ drawerLabel: 'Messages', title: 'Messages' }} />
       <Drawer.Screen name="auth" options={{ drawerLabel: 'Sign In', title: 'Sign In' }} />
     </Drawer>
   );
