@@ -97,6 +97,10 @@ export const properties = {
   my() {
     return request<Property[]>('/api/properties/my');
   },
+
+  coverImage(id: number) {
+    return request<{ coverImage: string | null }>(`/api/properties/${id}/cover-image`);
+  },
 };
 
 // ─── Agents ───────────────────────────────────────────────────────────────────

@@ -24,7 +24,7 @@ export interface Property {
   title: string;
   type: PropertyType;
   status: PropertyStatus;
-  price: string;
+  price: string;           // numeric → string from Drizzle
   address: string;
   city: string;
   state: string;
@@ -32,13 +32,13 @@ export interface Property {
   country: string;
   bedrooms: number | null;
   bathrooms: number | null;
-  squareFeet: number | null;
-  lotSize: number | null;
+  squareFeet: string | null; // numeric → string from Drizzle
+  lotSize: string | null;    // numeric → string from Drizzle
   yearBuilt: number | null;
-  garage: boolean;
-  pool: boolean;
+  garage: boolean | null;
+  pool: boolean | null;
   description: string | null;
-  images: string[];
+  images: string[] | null;
   createdAt: string;
 }
 
