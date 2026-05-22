@@ -39,6 +39,7 @@ export interface Property {
   pool: boolean | null;
   description: string | null;
   images: string[] | null;
+  listedByAgentId: number | null;
   createdAt: string;
 }
 

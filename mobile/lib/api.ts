@@ -159,14 +159,30 @@ export const visitings = {
     return request<PropertyVisiting[]>('/api/visitings/my');
   },
 
-  create(propertyId: number, visitDate: string, hour: string, notes?: string) {
+  check(propertyId: number) {
+    return request<{
+      booked: boolean;
+      visitDate?: string;
+      hour?: number;
+      status?: 'pending' | 'confirmed' | 'cancelled';
+      visitingId?: number;
+    }>(`/api/visitings?propertyId=${propertyId}`);
+  },
+
+  create(propertyId: number, visitDate: string, hour: number, notes?: string) {
     return request<PropertyVisiting>('/api/visitings', {
       method: 'POST',
       body: JSON.stringify({ propertyId, visitDate, hour, notes }),
     });
   },
 
-  busySlots(propertyId: number, date: string) {
-    return request<string[]>(`/api/visitings/busy-slots?propertyId=${propertyId}&date=${date}`);
+  deleteVisiting(id: number) {
+    return request<{ deleted: boolean }>(`/api/visitings/${id}`, { method: 'DELETE' });
+  },
+
+  busySlots(propertyId: number) {
+    return request<{ visitDate: string; hour: number }[]>(
+      `/api/visitings/busy-slots?propertyId=${propertyId}`
+    );
   },
 };
