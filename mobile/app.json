@@ -14,7 +14,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Allow access to your photo library to upload a profile picture."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +32,13 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow access to your photo library to upload a profile picture."
+        }
+      ]
     ]
   }
 }

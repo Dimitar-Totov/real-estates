@@ -5,6 +5,8 @@ import type {
   AgentReview,
   Message,
   PropertyVisiting,
+  VisitingRow,
+  Meeting,
   CreatePropertyPayload,
 } from './types';
 
@@ -72,6 +74,28 @@ export const users = {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
+  },
+
+  async uploadImage(type: 'avatar' | 'cover', uri: string, mimeType: string) {
+    const form = new FormData();
+    form.append('type', type);
+    form.append('file', { uri, name: `${type}.jpg`, type: mimeType } as unknown as Blob);
+    const res = await fetch(`${BASE_URL}/api/user/upload-image`, {
+      method: 'POST',
+      credentials: 'include',
+      body: form,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        throw new Error(json.error ?? `Upload failed with status ${res.status}`);
+      } catch (e) {
+        if (e instanceof SyntaxError) throw new Error(text || `Upload failed with status ${res.status}`);
+        throw e;
+      }
+    }
+    return res.json() as Promise<{ publicUrl: string }>;
   },
 };
 
@@ -156,7 +180,7 @@ export const messages = {
 
 export const visitings = {
   my() {
-    return request<PropertyVisiting[]>('/api/visitings/my');
+    return request<VisitingRow[]>('/api/visitings/my');
   },
 
   check(propertyId: number) {
@@ -184,5 +208,34 @@ export const visitings = {
     return request<{ visitDate: string; hour: number }[]>(
       `/api/visitings/busy-slots?propertyId=${propertyId}`
     );
+  },
+
+  accept(id: number) {
+    return request<PropertyVisiting>(`/api/visitings/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'confirmed' }),
+    });
+  },
+
+  decline(id: number) {
+    return request<PropertyVisiting>(`/api/visitings/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'cancelled' }),
+    });
+  },
+};
+
+// ─── Meetings ─────────────────────────────────────────────────────────────────
+
+export const meetings = {
+  my(page = 1) {
+    return request<{ rows: Meeting[]; total: number }>(`/api/meetings/my?page=${page}`);
+  },
+
+  sold(data: { meetingId: number; propertyName: string; buyer: string; transactionType: 'bought' | 'rented' }) {
+    return request<{ id: number }>('/api/meetings/sold', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 };

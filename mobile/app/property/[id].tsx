@@ -94,12 +94,13 @@ type BookingInfo = {
 
 // ─── Message modal ────────────────────────────────────────────────────────────
 
-function MessageModal({ agentName, receiverId, onClose }: {
+function MessageModal({ agentName, receiverId, initialSubject, onClose }: {
   agentName: string;
   receiverId: number;
+  initialSubject?: string;
   onClose: () => void;
 }) {
-  const [subject, setSubject] = useState('');
+  const [subject, setSubject] = useState(initialSubject ?? '');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -363,7 +364,7 @@ function TourBookingSection({ propertyId, userId }: { propertyId: number; userId
 
 // ─── Agent section ────────────────────────────────────────────────────────────
 
-function AgentSection({ agent, userId }: { agent: Agent; userId: number | null }) {
+function AgentSection({ agent, userId, propertyTitle }: { agent: Agent; userId: number | null; propertyTitle: string }) {
   const [msgOpen, setMsgOpen] = useState(false);
   const canMessage = userId !== null && userId !== agent.userId;
 
@@ -391,7 +392,7 @@ function AgentSection({ agent, userId }: { agent: Agent; userId: number | null }
         )}
       </View>
       {msgOpen && (
-        <MessageModal agentName={agent.name} receiverId={agent.userId} onClose={() => setMsgOpen(false)} />
+        <MessageModal agentName={agent.name} receiverId={agent.userId} initialSubject={propertyTitle} onClose={() => setMsgOpen(false)} />
       )}
     </View>
   );
@@ -672,7 +673,7 @@ export default function PropertyDetailScreen() {
 
           <TourBookingSection propertyId={p.id} userId={user?.id ?? null} />
 
-          {agent && <AgentSection agent={agent} userId={user?.id ?? null} />}
+          {agent && <AgentSection agent={agent} userId={user?.id ?? null} propertyTitle={p.title} />}
         </View>
 
       </ScrollView>

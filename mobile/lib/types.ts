@@ -87,6 +87,41 @@ export interface PropertyVisiting {
   notes: string | null;
 }
 
+export interface VisitingRow {
+  visitingId: number;
+  visitDate: string;
+  hour: number;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  createdAt: string;
+  messageId: number | null;
+  propertyId: number;
+  title: string;
+  address: string;
+  city: string;
+  state: string;
+  price: string;
+  propertyStatus: PropertyStatus;
+  type: PropertyType;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  squareFeet: string | null;
+  coverImage: string | null;
+  requesterName?: string;
+}
+
+export interface Meeting {
+  id: number;
+  agentId: number;
+  meetingDate: string;
+  propertyTitle: string;
+  propertyAddress: string;
+  requesterUsername: string;
+  requesterPhone: string | null;
+  requesterEmail: string | null;
+  markedSoldAt: string | null;
+  createdAt: string;
+}
+
 export interface CreatePropertyPayload {
   title: string;
   type: string;
