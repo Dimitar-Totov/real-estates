@@ -1,17 +1,57 @@
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../../lib/auth-context';
 
 type Mode = 'login' | 'register';
 
 export default function AuthScreen() {
+  const { login, register } = useAuth();
+  const router = useRouter();
+
   const [mode, setMode] = useState<Mode>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
 
   const isLogin = mode === 'login';
 
   const themeColor = isLogin ? '#8bb4e0' : '#7ec9b8';
   const gradientTop = isLogin ? '#8bb4e0' : '#7ec9b8';
+
+  async function handleSubmit() {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all required fields.');
+      return;
+    }
+    if (!isLogin && !username) {
+      Alert.alert('Error', 'Please enter a username.');
+      return;
+    }
+    if (!isLogin && password !== confirm) {
+      Alert.alert('Error', 'Passwords do not match.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      if (isLogin) {
+        await login(email, password);
+      } else {
+        await register(username, email, password);
+      }
+      router.replace('/');
+    } catch (err: unknown) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -45,6 +85,8 @@ export default function AuthScreen() {
                 placeholder="johndoe"
                 placeholderTextColor="#c0c0c0"
                 autoCapitalize="none"
+                value={username}
+                onChangeText={setUsername}
               />
             </View>
           </View>
@@ -61,6 +103,8 @@ export default function AuthScreen() {
               placeholderTextColor="#c0c0c0"
               keyboardType="email-address"
               autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
             />
           </View>
         </View>
@@ -75,6 +119,8 @@ export default function AuthScreen() {
               placeholder="••••••••"
               placeholderTextColor="#c0c0c0"
               secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
             />
             <TouchableOpacity style={s.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
               <Text style={s.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
@@ -93,6 +139,8 @@ export default function AuthScreen() {
                 placeholder="••••••••"
                 placeholderTextColor="#c0c0c0"
                 secureTextEntry={!showConfirm}
+                value={confirm}
+                onChangeText={setConfirm}
               />
               <TouchableOpacity style={s.eyeBtn} onPress={() => setShowConfirm(!showConfirm)}>
                 <Text style={s.eyeIcon}>{showConfirm ? '🙈' : '👁️'}</Text>
@@ -102,8 +150,12 @@ export default function AuthScreen() {
         )}
 
         {/* Submit */}
-        <TouchableOpacity style={[s.submitBtn, { backgroundColor: themeColor }]}>
-          <Text style={s.submitBtnText}>{isLogin ? 'Sign In' : 'Create Account'}</Text>
+        <TouchableOpacity
+          style={[s.submitBtn, { backgroundColor: themeColor }, submitting && s.submitBtnDisabled]}
+          onPress={handleSubmit}
+          disabled={submitting}
+        >
+          <Text style={s.submitBtnText}>{submitting ? 'Please wait…' : isLogin ? 'Sign In' : 'Create Account'}</Text>
         </TouchableOpacity>
 
         {/* Toggle mode */}
@@ -111,7 +163,7 @@ export default function AuthScreen() {
           <Text style={s.toggleText}>
             {isLogin ? "Don't have an account? " : 'Already have an account? '}
           </Text>
-          <TouchableOpacity onPress={() => setMode(isLogin ? 'register' : 'login')}>
+          <TouchableOpacity onPress={() => { setMode(isLogin ? 'register' : 'login'); setUsername(''); setEmail(''); setPassword(''); setConfirm(''); }}>
             <Text style={[s.toggleLink, { color: themeColor }]}>
               {isLogin ? 'Create one' : 'Sign in'}
             </Text>
@@ -149,6 +201,7 @@ const s = StyleSheet.create({
 
   // Submit
   submitBtn: { borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginTop: 8, marginBottom: 24 },
+  submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   // Toggle

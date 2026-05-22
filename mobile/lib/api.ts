@@ -10,36 +10,29 @@ import type {
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-// Stored auth token (set after login)
-let authToken: string | null = null;
-
-export function setAuthToken(token: string | null) {
-  authToken = token;
-}
-
-export function getAuthToken() {
-  return authToken;
-}
-
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  };
-
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-  }
-
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    },
+    // React Native's native HTTP stack persists cookies automatically,
+    // so the httpOnly `token` cookie is sent on every request.
     credentials: 'include',
   });
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(body || `Request failed with status ${res.status}`);
+    const text = await res.text();
+    try {
+      const json = JSON.parse(text);
+      throw new Error(json.error ?? json.message ?? `Request failed with status ${res.status}`);
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        throw new Error(text || `Request failed with status ${res.status}`);
+      }
+      throw e;
+    }
   }
 
   return res.json() as Promise<T>;

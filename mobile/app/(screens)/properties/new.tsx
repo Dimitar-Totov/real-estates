@@ -1,5 +1,7 @@
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
+import { Redirect } from 'expo-router';
+import { useAuth } from '../../../lib/auth-context';
 
 const PROPERTY_TYPES = ['house', 'apartment', 'condo', 'townhouse', 'land', 'commercial'];
 const STATUSES = ['for_sale', 'for_rent', 'sold', 'rented'];
@@ -70,10 +72,23 @@ function Checkbox({ label, checked, onToggle }: { label: string; checked: boolea
 }
 
 export default function ListPropertyScreen() {
+  const { user, loading } = useAuth();
   const [status, setStatus] = useState('');
   const [propertyType, setPropertyType] = useState('');
   const [garage, setGarage] = useState(false);
   const [pool, setPool] = useState(false);
+
+  if (loading) {
+    return (
+      <View style={s.centered}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return <Redirect href="/(screens)/auth" />;
+  }
 
   return (
     <ScrollView style={s.screen} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -217,6 +232,7 @@ export default function ListPropertyScreen() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#fff' },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   container: { padding: 20, paddingBottom: 40 },
   pageTitle: { fontSize: 26, fontWeight: 'bold', color: '#111827', marginBottom: 24 },
 
