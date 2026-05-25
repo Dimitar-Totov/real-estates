@@ -150,7 +150,7 @@ export const agents = {
 
   comment(agentId: number, comment: string) {
     return request<{ message: string }>(`/api/agents/${agentId}/comment`, {
-      method: 'POST',
+      method: 'PATCH',
       body: JSON.stringify({ comment }),
     });
   },
