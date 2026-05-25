@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { agents } from "@/db/schema";
+import { agents, users } from "@/db/schema";
+import { cdnUrl } from "@/services/userImagesService";
 
 export async function GET() {
   const rows = await db
@@ -11,6 +13,7 @@ export async function GET() {
       specialty:  agents.specialty,
       city:       agents.city,
       image:      agents.image,
+      avatarKey:  users.avatarKey,
       rating:     agents.rating,
       reviews:    agents.reviews,
       experience: agents.experience,
@@ -18,7 +21,14 @@ export async function GET() {
       email:      agents.email,
     })
     .from(agents)
+    .leftJoin(users, eq(agents.userId, users.id))
     .orderBy(agents.createdAt);
 
-  return NextResponse.json(rows);
+  return NextResponse.json(
+    rows.map((r) => ({
+      ...r,
+      image: r.avatarKey ? cdnUrl(r.avatarKey) : r.image,
+      avatarKey: undefined,
+    }))
+  );
 }
