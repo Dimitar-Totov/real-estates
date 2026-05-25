@@ -77,6 +77,25 @@ export interface Message {
   seenAt: string | null;
 }
 
+export interface ReceivedMessage {
+  id: number;
+  subject: string;
+  message: string;
+  sentAt: string;
+  seenAt: string | null;
+  senderId: number;
+  senderName: string | null;
+}
+
+export interface SentMessage {
+  id: number;
+  subject: string;
+  message: string;
+  sentAt: string;
+  receiverId: number;
+  receiverName: string | null;
+}
+
 export interface PropertyVisiting {
   id: number;
   userId: number;

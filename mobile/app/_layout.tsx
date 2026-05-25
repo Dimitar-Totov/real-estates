@@ -3,6 +3,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { AuthProvider } from '../lib/auth-context';
+import { MessagesButton } from '../components/MessagesButton';
 
 export default function RootLayout() {
   return (
@@ -16,6 +17,7 @@ export default function RootLayout() {
               title: 'Property Details',
               headerStyle: { backgroundColor: '#1a1a2e' },
               headerTintColor: '#fff',
+              headerRight: () => <MessagesButton />,
             }}
           />
         </Stack>

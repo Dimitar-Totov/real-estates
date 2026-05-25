@@ -2,6 +2,7 @@ import { Drawer } from 'expo-router/drawer';
 import { DrawerContentScrollView, DrawerItemList, DrawerItem } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../lib/auth-context';
+import { MessagesButton } from '../../components/MessagesButton';
 
 function CustomDrawerContent(props: any) {
   const { user, logout } = useAuth();
@@ -42,6 +43,7 @@ export default function ScreensLayout() {
         drawerStyle: { backgroundColor: '#1a1a2e' },
         drawerActiveTintColor: '#e8c97e',
         drawerInactiveTintColor: '#ccc',
+        headerRight: () => <MessagesButton />,
       }}
     >
       <Drawer.Screen name="index" options={{ drawerLabel: 'Home', title: 'Real Estates' }} />
@@ -51,6 +53,7 @@ export default function ScreensLayout() {
       <Drawer.Screen name="feed" options={{ drawerLabel: 'Feed', title: 'Feed' }} />
       <Drawer.Screen name="profile" options={{ drawerLabel: 'My Profile', title: 'My Profile' }} />
       <Drawer.Screen name="auth" options={{ title: 'Sign In', drawerItemStyle: { display: 'none' } }} />
+      <Drawer.Screen name="messages" options={{ title: 'Messages', drawerItemStyle: { display: 'none' } }} />
     </Drawer>
   );
 }

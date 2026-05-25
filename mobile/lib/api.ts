@@ -3,7 +3,8 @@ import type {
   Property,
   Agent,
   AgentReview,
-  Message,
+  ReceivedMessage,
+  SentMessage,
   PropertyVisiting,
   VisitingRow,
   Meeting,
@@ -164,14 +165,25 @@ export const agents = {
 // ─── Messages ─────────────────────────────────────────────────────────────────
 
 export const messages = {
-  list() {
-    return request<Message[]>('/api/messages');
+  received() {
+    return request<ReceivedMessage[]>('/api/messages?tab=received');
+  },
+
+  sent() {
+    return request<SentMessage[]>('/api/messages?tab=sent');
   },
 
   send(receiverId: number, subject: string, message: string) {
-    return request<Message>('/api/messages', {
+    return request<{ success: true; id: number }>('/api/messages', {
       method: 'POST',
       body: JSON.stringify({ receiverId, subject, message }),
+    });
+  },
+
+  markSeen(id: number) {
+    return request<{ success: true }>('/api/messages', {
+      method: 'PATCH',
+      body: JSON.stringify({ id }),
     });
   },
 };
