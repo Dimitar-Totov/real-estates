@@ -1,5 +1,5 @@
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
-import { useState, useEffect, useMemo } from 'react';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Image, RefreshControl } from 'react-native';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { properties as propertiesApi } from '../../../lib/api';
 import type { Property } from '../../../lib/types';
@@ -234,24 +234,38 @@ export default function AllPropertiesScreen() {
   const [allProperties, setAllProperties] = useState<Property[]>([]);
   const [coverImages, setCoverImages] = useState<Record<number, string | null>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError]     = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
 
-  useEffect(() => {
-    propertiesApi.list()
-      .then(data => {
-        setAllProperties(data);
-        Promise.all(
-          data.map(p =>
-            propertiesApi.coverImage(p.id)
-              .then(r => [p.id, r.coverImage] as const)
-              .catch(() => [p.id, null] as const)
-          )
-        ).then(pairs => setCoverImages(Object.fromEntries(pairs)));
-      })
-      .catch(err => setError(err instanceof Error ? err.message : 'Failed to load properties'))
-      .finally(() => setLoading(false));
+  const fetchProperties = useCallback(async (opts: { silent?: boolean } = {}) => {
+    if (!opts.silent) setLoading(true);
+    setError(null);
+    try {
+      const data = await propertiesApi.list();
+      setAllProperties(data);
+      const pairs = await Promise.all(
+        data.map(p =>
+          propertiesApi.coverImage(p.id)
+            .then(r => [p.id, r.coverImage] as const)
+            .catch(() => [p.id, null] as const)
+        )
+      );
+      setCoverImages(Object.fromEntries(pairs));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load properties');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => { fetchProperties(); }, [fetchProperties]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchProperties({ silent: true });
+  }, [fetchProperties]);
 
   const filtered = useMemo(() => applyFilters(allProperties, filters), [allProperties, filters]);
 
@@ -264,7 +278,12 @@ export default function AllPropertiesScreen() {
   }
 
   return (
-    <ScrollView style={s.screen} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={s.screen}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
       <View style={s.header}>
         <Text style={s.heading}>Property Listings</Text>
         <Text style={s.subheading}>Browse thousands of homes for sale and rent</Text>

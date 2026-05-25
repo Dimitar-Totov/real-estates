@@ -1,7 +1,7 @@
 import {
   View, Text, ScrollView, Image, StyleSheet, ActivityIndicator,
   TouchableOpacity, Modal, TextInput, Alert, KeyboardAvoidingView,
-  Platform, Linking,
+  Platform, Linking, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -371,6 +371,7 @@ export default function ProfileScreen() {
   const [meetingsTotal, setMeetingsTotal] = useState(0);
   const [meetingsPage, setMeetingsPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -414,6 +415,15 @@ export default function ProfileScreen() {
       showToast('Failed to load profile', 'error');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function refreshShowings() {
+    setRefreshing(true);
+    try {
+      setVisitings(await visitingsApi.my().catch(() => [] as VisitingRow[]));
+    } finally {
+      setRefreshing(false);
     }
   }
 
@@ -525,17 +535,12 @@ export default function ProfileScreen() {
     showToast('Property marked as sold');
   }
 
-  // ── Redirect if not logged in
-  if (!loading && !authUser) {
-    return (
-      <View style={s.centered}>
-        <Text style={s.guestTitle}>Sign in to view your profile</Text>
-        <TouchableOpacity style={s.signInBtn} onPress={() => router.push('/(screens)/auth')}>
-          <Text style={s.signInBtnTxt}>Sign In</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  // ── Redirect guests to auth
+  useEffect(() => {
+    if (!loading && !authUser) router.replace('/(screens)/auth');
+  }, [loading, authUser]);
+
+  if (!loading && !authUser) return null;
 
   if (loading) {
     return <View style={s.centered}><ActivityIndicator size="large" color="#CC0000" /></View>;
@@ -558,7 +563,11 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      <ScrollView style={s.screen} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={s.screen}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshShowings} />}
+      >
 
         {/* ── Cover + Avatar ── */}
         <View style={s.coverWrap}>

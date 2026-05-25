@@ -34,6 +34,8 @@ function CustomDrawerContent(props: any) {
 }
 
 export default function ScreensLayout() {
+  const { user } = useAuth();
+
   return (
     <Drawer
       drawerContent={(props) => <CustomDrawerContent {...props} />}
@@ -51,7 +53,7 @@ export default function ScreensLayout() {
       <Drawer.Screen name="properties/new" options={{ drawerLabel: 'List Your Property', title: 'List Your Property' }} />
       <Drawer.Screen name="agents/index" options={{ drawerLabel: 'Find an Agent', title: 'Find an Agent' }} />
       <Drawer.Screen name="feed" options={{ drawerLabel: 'Feed', title: 'Feed' }} />
-      <Drawer.Screen name="profile" options={{ drawerLabel: 'My Profile', title: 'My Profile' }} />
+      <Drawer.Screen name="profile" options={{ drawerLabel: 'My Profile', title: 'My Profile', drawerItemStyle: user ? undefined : { display: 'none' } }} />
       <Drawer.Screen name="auth" options={{ title: 'Sign In', drawerItemStyle: { display: 'none' } }} />
       <Drawer.Screen name="messages" options={{ title: 'Messages', drawerItemStyle: { display: 'none' } }} />
     </Drawer>
