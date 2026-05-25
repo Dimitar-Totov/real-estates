@@ -869,7 +869,7 @@ const s = StyleSheet.create({
 
   // Avatar row
   avatarRow: {
-    flexDirection: 'row', alignItems: 'flex-end',
+    flexDirection: 'row',
     paddingHorizontal: 16, marginTop: -40, marginBottom: 12,
   },
   avatarWrap: { position: 'relative', marginRight: 12 },
@@ -884,7 +884,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: '#e5e7eb',
   },
   avatarEditIcon: { fontSize: 12, color: '#374151' },
-  nameBlock: { flex: 1, paddingBottom: 4 },
+  nameBlock: { flex: 1, paddingTop: 42 },
   username: { fontSize: 20, fontWeight: '700', color: '#111827' },
   roleBadge: { alignSelf: 'flex-start', marginTop: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 99 },
   roleBadgeAgent: { backgroundColor: '#fef3c7' },
