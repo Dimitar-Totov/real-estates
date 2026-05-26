@@ -50,7 +50,7 @@ export default function ScreensLayout() {
     >
       <Drawer.Screen name="index" options={{ drawerLabel: 'Home', title: 'Real Estates' }} />
       <Drawer.Screen name="listings/index" options={{ drawerLabel: 'All Properties', title: 'All Properties' }} />
-      <Drawer.Screen name="properties/new" options={{ drawerLabel: 'List Your Property', title: 'List Your Property' }} />
+      <Drawer.Screen name="properties/new" options={{ drawerLabel: 'List Your Property', title: 'List Your Property', drawerItemStyle: user?.role === 'admin' ? { display: 'none' } : undefined }} />
       <Drawer.Screen name="agents/index" options={{ drawerLabel: 'Find an Agent', title: 'Find an Agent' }} />
       <Drawer.Screen name="feed" options={{ drawerLabel: 'Feed', title: 'Feed' }} />
       <Drawer.Screen name="profile" options={{ drawerLabel: 'My Profile', title: 'My Profile', drawerItemStyle: user ? undefined : { display: 'none' } }} />
