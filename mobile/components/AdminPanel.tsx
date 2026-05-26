@@ -643,180 +643,177 @@ function AgentCandidatesTab() {
     }
   }
 
-  if (loading) {
-    return <View style={ac.center}><ActivityIndicator size="large" color={NAVY} /></View>;
-  }
-
   const candidate = candidates[index];
-
-  if (!candidate) {
-    return (
-      <View style={ac.center}>
-        <Text style={{ fontSize: 48, marginBottom: 12 }}>👥</Text>
-        <Text style={ac.emptyTxt}>No agent candidates yet.</Text>
-      </View>
-    );
-  }
-
-  const appliedDate = new Date(candidate.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  const initial = candidate.username.charAt(0).toUpperCase();
+  const appliedDate = candidate ? new Date(candidate.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+  const initial = candidate ? candidate.username.charAt(0).toUpperCase() : '';
 
   return (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={ac.scroll}
+      contentContainerStyle={loading || !candidate ? ac.centerFlex : ac.scroll}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={NAVY} />}
     >
-      {toast && (
-        <View style={[ac.toast, { backgroundColor: toast.ok ? '#065f46' : '#991b1b' }]}>
-          <Text style={ac.toastTxt}>{toast.msg}</Text>
-        </View>
-      )}
+      {loading ? (
+        <ActivityIndicator size="large" color={NAVY} />
+      ) : !candidate ? (
+        <>
+          <Text style={{ fontSize: 48, marginBottom: 12 }}>👥</Text>
+          <Text style={ac.emptyTxt}>No agent candidates yet.</Text>
+        </>
+      ) : (
+        <>
+          {toast && (
+            <View style={[ac.toast, { backgroundColor: toast.ok ? '#065f46' : '#991b1b' }]}>
+              <Text style={ac.toastTxt}>{toast.msg}</Text>
+            </View>
+          )}
 
-      {/* Section header */}
-      <View style={ac.sectionHeader}>
-        <View>
-          <Text style={ac.sectionTitle}>Agent Candidates</Text>
-          <Text style={ac.sectionSub}>{candidates.length} application{candidates.length !== 1 ? 's' : ''} received</Text>
-        </View>
-        {candidates.length > 1 && (
-          <View style={ac.countBadge}>
-            <Text style={ac.countTxt}>{index + 1} of {candidates.length}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Card */}
-      <View style={ac.card}>
-        {/* Left: gradient avatar section */}
-        <View style={ac.cardLeft}>
-          <View style={ac.avatarWrap}>
-            {candidate.avatarUrl
-              ? <Image source={{ uri: candidate.avatarUrl }} style={ac.avatar} />
-              : (
-                <View style={[ac.avatar, { alignItems: 'center', justifyContent: 'center' }]}>
-                  <Text style={{ fontSize: 48, fontWeight: '800', color: '#fff' }}>{initial}</Text>
-                </View>
-              )
-            }
-          </View>
-          <Text style={ac.candidateName}>{candidate.username}</Text>
-          <View style={ac.idBadge}><Text style={ac.idTxt}># Candidate {candidate.id}</Text></View>
-          <Text style={ac.appliedTxt}>📅 Applied {appliedDate}</Text>
-        </View>
-
-        {/* Right: info fields + actions */}
-        <View style={ac.cardRight}>
-          <Text style={ac.cardRightTitle}>{candidate.username}</Text>
-          <Text style={ac.cardRightSub}>Agent Application</Text>
-
-          {CANDIDATE_FIELDS.map(({ key, label, icon }) => {
-            const value = candidate[key] as string | null;
-            return (
-              <View key={key} style={ac.fieldRow}>
-                <View style={ac.fieldIcon}><Text style={{ fontSize: 16 }}>{icon}</Text></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={ac.fieldLabel}>{label}</Text>
-                  <Text style={[ac.fieldValue, !value && ac.fieldNone]}>
-                    {value || 'Not provided'}
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
-
-          {/* Actions */}
-          <View style={ac.actions}>
-            {!accepting ? (
-              <View style={ac.actionRow}>
-                <TouchableOpacity
-                  style={ac.acceptBtn}
-                  onPress={() => setAccepting(true)}
-                  disabled={submitting !== null}
-                >
-                  <Text style={ac.acceptTxt}>✓ Accept</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={ac.declineBtn}
-                  onPress={handleDecline}
-                  disabled={submitting !== null}
-                >
-                  {submitting === 'decline'
-                    ? <ActivityIndicator color="#ef4444" size="small" />
-                    : <Text style={ac.declineTxt}>✕ Decline</Text>
-                  }
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View>
-                <Text style={ac.specPrompt}>Choose a specialty for {candidate.username}</Text>
-                <View style={ac.specGrid}>
-                  {SPECIALTIES.map(s => (
-                    <TouchableOpacity
-                      key={s.id}
-                      style={[ac.specPill, specialty === s.id && ac.specPillActive]}
-                      onPress={() => setSpecialty(s.id === specialty ? null : s.id)}
-                      disabled={submitting !== null}
-                    >
-                      <Text style={{ fontSize: 14 }}>{s.emoji}</Text>
-                      <Text style={[ac.specPillTxt, specialty === s.id && { color: '#065f46' }]}>{s.id}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <View style={ac.actionRow}>
-                  <TouchableOpacity
-                    style={[ac.acceptBtn, (!specialty || submitting !== null) && { opacity: 0.45 }]}
-                    onPress={handleAccept}
-                    disabled={!specialty || submitting !== null}
-                  >
-                    {submitting === 'accept'
-                      ? <ActivityIndicator color="#fff" size="small" />
-                      : <Text style={ac.acceptTxt}>✓ Confirm Accept</Text>
-                    }
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={ac.backBtn}
-                    onPress={() => { setAccepting(false); setSpecialty(null); }}
-                    disabled={submitting !== null}
-                  >
-                    <Text style={ac.backTxt}>← Back</Text>
-                  </TouchableOpacity>
-                </View>
+          {/* Section header */}
+          <View style={ac.sectionHeader}>
+            <View>
+              <Text style={ac.sectionTitle}>Agent Candidates</Text>
+              <Text style={ac.sectionSub}>{candidates.length} application{candidates.length !== 1 ? 's' : ''} received</Text>
+            </View>
+            {candidates.length > 1 && (
+              <View style={ac.countBadge}>
+                <Text style={ac.countTxt}>{index + 1} of {candidates.length}</Text>
               </View>
             )}
           </View>
-        </View>
-      </View>
 
-      {/* Navigation */}
-      {candidates.length > 1 && (
-        <View style={ac.navWrap}>
-          <View style={ac.navRow}>
-            <TouchableOpacity
-              style={ac.navBtn}
-              onPress={() => setIndex(i => (i - 1 + candidates.length) % candidates.length)}
-            >
-              <Text style={ac.navArrow}>‹</Text>
-            </TouchableOpacity>
-            <Text style={ac.navCount}>{index + 1} / {candidates.length}</Text>
-            <TouchableOpacity
-              style={ac.navBtn}
-              onPress={() => setIndex(i => (i + 1) % candidates.length)}
-            >
-              <Text style={ac.navArrow}>›</Text>
-            </TouchableOpacity>
+          {/* Card */}
+          <View style={ac.card}>
+            {/* Left: gradient avatar section */}
+            <View style={ac.cardLeft}>
+              <View style={ac.avatarWrap}>
+                {candidate.avatarUrl
+                  ? <Image source={{ uri: candidate.avatarUrl }} style={ac.avatar} />
+                  : (
+                    <View style={[ac.avatar, { alignItems: 'center', justifyContent: 'center' }]}>
+                      <Text style={{ fontSize: 48, fontWeight: '800', color: '#fff' }}>{initial}</Text>
+                    </View>
+                  )
+                }
+              </View>
+              <Text style={ac.candidateName}>{candidate.username}</Text>
+              <View style={ac.idBadge}><Text style={ac.idTxt}># Candidate {candidate.id}</Text></View>
+              <Text style={ac.appliedTxt}>📅 Applied {appliedDate}</Text>
+            </View>
+
+            {/* Right: info fields + actions */}
+            <View style={ac.cardRight}>
+              <Text style={ac.cardRightTitle}>{candidate.username}</Text>
+              <Text style={ac.cardRightSub}>Agent Application</Text>
+
+              {CANDIDATE_FIELDS.map(({ key, label, icon }) => {
+                const value = candidate[key] as string | null;
+                return (
+                  <View key={key} style={ac.fieldRow}>
+                    <View style={ac.fieldIcon}><Text style={{ fontSize: 16 }}>{icon}</Text></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={ac.fieldLabel}>{label}</Text>
+                      <Text style={[ac.fieldValue, !value && ac.fieldNone]}>
+                        {value || 'Not provided'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+
+              {/* Actions */}
+              <View style={ac.actions}>
+                {!accepting ? (
+                  <View style={ac.actionRow}>
+                    <TouchableOpacity
+                      style={ac.acceptBtn}
+                      onPress={() => setAccepting(true)}
+                      disabled={submitting !== null}
+                    >
+                      <Text style={ac.acceptTxt}>✓ Accept</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={ac.declineBtn}
+                      onPress={handleDecline}
+                      disabled={submitting !== null}
+                    >
+                      {submitting === 'decline'
+                        ? <ActivityIndicator color="#ef4444" size="small" />
+                        : <Text style={ac.declineTxt}>✕ Decline</Text>
+                      }
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View>
+                    <Text style={ac.specPrompt}>Choose a specialty for {candidate.username}</Text>
+                    <View style={ac.specGrid}>
+                      {SPECIALTIES.map(s => (
+                        <TouchableOpacity
+                          key={s.id}
+                          style={[ac.specPill, specialty === s.id && ac.specPillActive]}
+                          onPress={() => setSpecialty(s.id === specialty ? null : s.id)}
+                          disabled={submitting !== null}
+                        >
+                          <Text style={{ fontSize: 14 }}>{s.emoji}</Text>
+                          <Text style={[ac.specPillTxt, specialty === s.id && { color: '#065f46' }]}>{s.id}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={ac.actionRow}>
+                      <TouchableOpacity
+                        style={[ac.acceptBtn, (!specialty || submitting !== null) && { opacity: 0.45 }]}
+                        onPress={handleAccept}
+                        disabled={!specialty || submitting !== null}
+                      >
+                        {submitting === 'accept'
+                          ? <ActivityIndicator color="#fff" size="small" />
+                          : <Text style={ac.acceptTxt}>✓ Confirm Accept</Text>
+                        }
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={ac.backBtn}
+                        onPress={() => { setAccepting(false); setSpecialty(null); }}
+                        disabled={submitting !== null}
+                      >
+                        <Text style={ac.backTxt}>← Back</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
           </View>
-          <View style={ac.dots}>
-            {candidates.map((_, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[ac.dot, i === index && ac.dotActive]}
-                onPress={() => setIndex(i)}
-              />
-            ))}
-          </View>
-        </View>
+
+          {/* Navigation */}
+          {candidates.length > 1 && (
+            <View style={ac.navWrap}>
+              <View style={ac.navRow}>
+                <TouchableOpacity
+                  style={ac.navBtn}
+                  onPress={() => setIndex(i => (i - 1 + candidates.length) % candidates.length)}
+                >
+                  <Text style={ac.navArrow}>‹</Text>
+                </TouchableOpacity>
+                <Text style={ac.navCount}>{index + 1} / {candidates.length}</Text>
+                <TouchableOpacity
+                  style={ac.navBtn}
+                  onPress={() => setIndex(i => (i + 1) % candidates.length)}
+                >
+                  <Text style={ac.navArrow}>›</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={ac.dots}>
+                {candidates.map((_, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={[ac.dot, i === index && ac.dotActive]}
+                    onPress={() => setIndex(i)}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+        </>
       )}
     </ScrollView>
   );
@@ -824,6 +821,7 @@ function AgentCandidatesTab() {
 
 const ac = StyleSheet.create({
   center:        { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  centerFlex:    { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyTxt:      { fontSize: 14, color: '#9ca3af', fontWeight: '500' },
   scroll:        { padding: 16, paddingBottom: 40 },
   toast:         { borderRadius: 12, padding: 12, marginBottom: 14, alignItems: 'center' },
