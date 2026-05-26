@@ -375,6 +375,7 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [imagePickerTarget, setImagePickerTarget] = useState<'avatar' | 'cover' | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [activeTab, setActiveTab] = useState<'showings' | 'listings' | 'meetings'>('showings');
 
@@ -439,7 +440,25 @@ export default function ProfileScreen() {
     }
   }
 
-  async function pickAndUpload(type: 'avatar' | 'cover') {
+  async function uploadAsset(type: 'avatar' | 'cover', asset: ImagePicker.ImagePickerAsset) {
+    if (type === 'avatar') setUploadingAvatar(true);
+    else setUploadingCover(true);
+    try {
+      const { publicUrl } = await usersApi.uploadImage(type, asset.uri, asset.mimeType ?? 'image/jpeg');
+      setProfile(prev => prev
+        ? { ...prev, [type === 'avatar' ? 'avatarUrl' : 'coverUrl']: publicUrl }
+        : prev
+      );
+      showToast(`${type === 'avatar' ? 'Avatar' : 'Cover'} updated`);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Upload failed', 'error');
+    } finally {
+      if (type === 'avatar') setUploadingAvatar(false);
+      else setUploadingCover(false);
+    }
+  }
+
+  async function pickFromLibrary(type: 'avatar' | 'cover') {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert('Permission required', 'Allow photo library access to upload images.');
@@ -452,26 +471,23 @@ export default function ProfileScreen() {
       quality: 0.85,
     });
     if (result.canceled) return;
+    await uploadAsset(type, result.assets[0]);
+  }
 
-    const asset = result.assets[0];
-    const mimeType = asset.mimeType ?? 'image/jpeg';
-
-    if (type === 'avatar') setUploadingAvatar(true);
-    else setUploadingCover(true);
-
-    try {
-      const { publicUrl } = await usersApi.uploadImage(type, asset.uri, mimeType);
-      setProfile(prev => prev
-        ? { ...prev, [type === 'avatar' ? 'avatarUrl' : 'coverUrl']: publicUrl }
-        : prev
-      );
-      showToast(`${type === 'avatar' ? 'Avatar' : 'Cover'} updated`);
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Upload failed', 'error');
-    } finally {
-      if (type === 'avatar') setUploadingAvatar(false);
-      else setUploadingCover(false);
+  async function captureFromCamera(type: 'avatar' | 'cover') {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission required', 'Allow camera access to take photos.');
+      return;
     }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: type === 'avatar' ? [1, 1] : [16, 9],
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+    await uploadAsset(type, result.assets[0]);
   }
 
   async function saveLocation(location: string) {
@@ -583,7 +599,7 @@ export default function ProfileScreen() {
               <ActivityIndicator color="#fff" />
             </View>
           )}
-          <TouchableOpacity style={s.coverEditBtn} onPress={() => pickAndUpload('cover')} disabled={uploadingCover}>
+          <TouchableOpacity style={s.coverEditBtn} onPress={() => setImagePickerTarget('cover')} disabled={uploadingCover}>
             <Text style={s.coverEditIcon}>📷</Text>
           </TouchableOpacity>
         </View>
@@ -600,7 +616,7 @@ export default function ProfileScreen() {
                   </View>
                 )
             }
-            <TouchableOpacity style={s.avatarEditBtn} onPress={() => pickAndUpload('avatar')} disabled={uploadingAvatar}>
+            <TouchableOpacity style={s.avatarEditBtn} onPress={() => setImagePickerTarget('avatar')} disabled={uploadingAvatar}>
               <Text style={s.avatarEditIcon}>✎</Text>
             </TouchableOpacity>
           </View>
@@ -840,6 +856,56 @@ export default function ProfileScreen() {
         onConfirm={handleMarkSold}
         onClose={() => setMarkSoldTarget(null)}
       />
+
+      {/* ── Image source picker ── */}
+      <Modal
+        visible={imagePickerTarget !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setImagePickerTarget(null)}
+      >
+        <TouchableOpacity style={ips.backdrop} activeOpacity={1} onPress={() => setImagePickerTarget(null)} />
+        <View style={ips.sheet}>
+          <View style={ips.handle} />
+          <Text style={ips.title}>
+            {imagePickerTarget === 'avatar' ? 'Update Profile Photo' : 'Update Cover Photo'}
+          </Text>
+
+          <TouchableOpacity
+            style={ips.option}
+            onPress={() => {
+              const t = imagePickerTarget!;
+              setImagePickerTarget(null);
+              captureFromCamera(t);
+            }}
+          >
+            <View style={ips.optionIcon}><Text style={ips.optionEmoji}>📷</Text></View>
+            <View style={ips.optionBody}>
+              <Text style={ips.optionLabel}>Take Photo</Text>
+              <Text style={ips.optionSub}>Use your camera</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={ips.option}
+            onPress={() => {
+              const t = imagePickerTarget!;
+              setImagePickerTarget(null);
+              pickFromLibrary(t);
+            }}
+          >
+            <View style={ips.optionIcon}><Text style={ips.optionEmoji}>🖼️</Text></View>
+            <View style={ips.optionBody}>
+              <Text style={ips.optionLabel}>Choose from Library</Text>
+              <Text style={ips.optionSub}>Pick an existing photo</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={ips.cancelBtn} onPress={() => setImagePickerTarget(null)}>
+            <Text style={ips.cancelTxt}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -1047,4 +1113,19 @@ const ms = StyleSheet.create({
   txChipOn: { backgroundColor: '#1a1a2e', borderColor: '#1a1a2e' },
   txTxt: { fontSize: 14, fontWeight: '600', color: '#374151' },
   txTxtOn: { color: '#fff' },
+});
+
+const ips = StyleSheet.create({
+  backdrop:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
+  sheet:       { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 36 },
+  handle:      { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginBottom: 20 },
+  title:       { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 16 },
+  option:      { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  optionIcon:  { width: 44, height: 44, borderRadius: 12, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center' },
+  optionEmoji: { fontSize: 22 },
+  optionBody:  { flex: 1 },
+  optionLabel: { fontSize: 15, fontWeight: '600', color: '#111827' },
+  optionSub:   { fontSize: 13, color: '#9ca3af', marginTop: 2 },
+  cancelBtn:   { marginTop: 16, paddingVertical: 14, alignItems: 'center', borderRadius: 14, backgroundColor: '#f3f4f6' },
+  cancelTxt:   { fontSize: 15, fontWeight: '600', color: '#6b7280' },
 });
