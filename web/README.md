@@ -34,28 +34,3 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 You can visit the site right here -> https://real-estates-web-540.netlify.app/
 
 If the date of visiting is expired, implement functionality for user to see request showing again
-
-Admin:
-Username: Admin
-Email: admin@gmail.com
-Password: DimitarAdmin123456!
-
-Agent:
-Username: Dimitar Agent
-Email: best.agent@gmail.com
-Password: BestAgent123456!
-
-User1:
-Username: Dimitar
-Email: dimitar@email.com    
-Password: Dimitar123456!
-
-User2:
-Username: User
-Email: user@email.com
-Password: User123456!
-
-User3:
-Username: Martin
-Email: martin@gmail.com
-Password: Martin123456!
