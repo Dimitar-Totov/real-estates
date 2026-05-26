@@ -2,6 +2,9 @@
 
 A full-stack real-estate platform with a Next.js web app and a React Native mobile app sharing a single backend.
 
+## Web
+https://realestatedimitarapp.netlify.app/
+
 ---
 
 ## Table of Contents
