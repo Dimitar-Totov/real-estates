@@ -7,8 +7,28 @@ const PROTECTED = ["/properties/new", "/feed", "/profile"];
 // Routes that logged-in users should not visit (redirect to home)
 const GUEST_ONLY = ["/auth"];
 
+const ALLOWED_ORIGINS = ["https://realestatedimitarmobile.netlify.app"];
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Credentials": "true",
+};
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const origin = req.headers.get("origin") ?? "";
+  const isAllowedOrigin = ALLOWED_ORIGINS.includes(origin);
+
+  // Handle CORS preflight for API routes
+  if (req.method === "OPTIONS" && pathname.startsWith("/api/")) {
+    const headers = {
+      ...(isAllowedOrigin && { "Access-Control-Allow-Origin": origin }),
+      ...CORS_HEADERS,
+    };
+    return NextResponse.json({}, { headers });
+  }
+
   const token = req.cookies.get("token")?.value;
 
   let isAuthenticated = false;
@@ -33,9 +53,19 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+
+  // Attach CORS headers to API responses for allowed origins
+  if (isAllowedOrigin && pathname.startsWith("/api/")) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+    for (const [key, value] of Object.entries(CORS_HEADERS)) {
+      response.headers.set(key, value);
+    }
+  }
+
+  return response;
 }
 
 export const config = {
-  matcher: ["/properties/new", "/feed", "/profile", "/auth"],
+  matcher: ["/properties/new", "/feed", "/profile", "/auth", "/api/:path*"],
 };
