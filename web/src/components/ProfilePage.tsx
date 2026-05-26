@@ -299,7 +299,7 @@ export default function ProfilePage({
           )}
         </div>
 
-        <div className="absolute left-16 sm:left-24 bottom-0 translate-y-1/2 z-10">
+        <div className="absolute left-1/2 -translate-x-1/2 sm:left-24 sm:translate-x-0 bottom-0 translate-y-1/2 z-10">
           <div className="relative group/av">
             {avatarSrc
               ? <img src={avatarSrc} alt={name} className="w-36 h-36 sm:w-44 sm:h-44 rounded-full border-4 border-white object-cover shadow-md" /> // eslint-disable-line @next/next/no-img-element
@@ -340,13 +340,13 @@ export default function ProfilePage({
 
       {/* ── User info header ── */}
       <div className="max-w-6xl mx-auto w-full px-6 sm:px-10 pt-24 pb-8">
-        <div className="ml-36 sm:ml-48">
+        <div className="sm:ml-48 text-center sm:text-left">
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-br from-slate-900 via-slate-700 to-slate-500 bg-clip-text text-transparent leading-tight">
             {name}
           </h1>
 
           {/* ── Info row: location · socials · contact ── */}
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="mt-2 flex flex-col items-center gap-y-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-start sm:gap-x-3">
 
             {/* Location */}
             {editingLocation ? (
@@ -384,7 +384,7 @@ export default function ProfilePage({
             )}
 
             {!editingSocials ? (
-              <div className="flex items-center gap-3 group/soc">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-3 group/soc">
                 {socialsValue.facebook && (
                   <a href={toAbsoluteUrl(socialsValue.facebook)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-blue-600 hover:text-blue-500 transition-colors text-sm font-medium">
                     <FacebookSvg />Facebook
@@ -423,7 +423,7 @@ export default function ProfilePage({
 
             {/* Contact info inline */}
             {editingContact === null && (
-              <div className="flex flex-wrap items-center gap-3 group/contact">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 group/contact">
                 {contactValue.officePhone && (
                   <a href={`tel:${contactValue.officePhone}`} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors">
                     <Phone className="w-3.5 h-3.5 shrink-0 text-gray-400" />{contactValue.officePhone}
@@ -571,7 +571,7 @@ export default function ProfilePage({
                 <div ref={carouselRef} onScroll={checkScroll}
                   className="flex justify-center gap-5 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-6 sm:px-10 pb-4">
                   {visitingsState.map((v) => (
-                    <div key={v.visitingId} className="w-80 shrink-0">
+                    <div key={v.visitingId} className="w-80 max-w-[calc(100vw-3rem)] shrink-0">
                       <VisitingPropertyCard
                         visiting={v}
                         showActions={isAgent}
@@ -606,7 +606,7 @@ export default function ProfilePage({
                 <div ref={carouselRef} onScroll={checkScroll}
                   className="flex justify-center gap-5 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-6 sm:px-10 pb-4">
                   {listings.map((listing) => (
-                    <div key={listing.id} className="w-80 shrink-0">
+                    <div key={listing.id} className="w-80 max-w-[calc(100vw-3rem)] shrink-0">
                       <PropertyCard property={listing} coverImage={listing.coverImage} />
                     </div>
                   ))}

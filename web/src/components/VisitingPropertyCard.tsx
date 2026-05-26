@@ -101,7 +101,7 @@ export default function VisitingPropertyCard({
 
       <Link href={`/properties/${visiting.propertyId}`} className="flex flex-col flex-1">
         {/* Image area */}
-        <div className="relative h-64 bg-gradient-to-br from-slate-100 via-gray-50 to-slate-200 overflow-hidden flex items-center justify-center">
+        <div className="relative h-44 sm:h-64 bg-gradient-to-br from-slate-100 via-gray-50 to-slate-200 overflow-hidden flex items-center justify-center">
           {coverImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -134,8 +134,8 @@ export default function VisitingPropertyCard({
         </div>
 
         {/* Content */}
-        <div className="flex flex-col flex-1 p-5 gap-2">
-          <p className="text-2xl font-bold text-[#CC0000] leading-tight">
+        <div className="flex flex-col flex-1 p-3 sm:p-5 gap-2">
+          <p className="text-xl sm:text-2xl font-bold text-[#CC0000] leading-tight">
             ${Number(visiting.price).toLocaleString()}
             {visiting.propertyStatus === "for_rent" && (
               <span className="text-base font-normal text-gray-400 ml-1">/mo</span>
@@ -163,10 +163,10 @@ export default function VisitingPropertyCard({
           </p>
 
           {/* Stats row */}
-          <div className="mt-auto pt-4 border-t border-gray-100 flex items-center gap-5 text-base text-gray-500">
+          <div className="mt-auto pt-3 sm:pt-4 border-t border-gray-100 flex items-center gap-3 sm:gap-5 text-sm sm:text-base text-gray-500">
             {visiting.bedrooms != null && (
               <span className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
                 </svg>
                 {visiting.bedrooms} bd
@@ -174,7 +174,7 @@ export default function VisitingPropertyCard({
             )}
             {visiting.bathrooms != null && (
               <span className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 {visiting.bathrooms} ba
@@ -182,7 +182,7 @@ export default function VisitingPropertyCard({
             )}
             {visiting.squareFeet != null && (
               <span className="flex items-center gap-2 ml-auto text-sm text-gray-400">
-                <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/>
                 </svg>
                 {Number(visiting.squareFeet).toLocaleString()} sqft
