@@ -251,3 +251,73 @@ export const meetings = {
     });
   },
 };
+
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
+export type AdminUserResult = {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  avatarUrl: string | null;
+  location: string | null;
+  createdAt: string;
+  officePhone: string | null;
+  mobilePhone: string | null;
+  contactEmail: string | null;
+};
+
+export type AdminCandidate = {
+  id: number;
+  userId: number;
+  username: string;
+  avatarUrl: string | null;
+  personalInfo: string | null;
+  education: string | null;
+  workExperience: string | null;
+  skills: string | null;
+  availability: string | null;
+  createdAt: string;
+};
+
+export const admin = {
+  stats() {
+    return request<{ properties: number; agents: number; users: number; forSale: number; forRent: number }>(
+      '/api/admin/stats'
+    );
+  },
+
+  monthlyProperties() {
+    return request<{ year: number; sold: number[]; rented: number[]; listed: number[] }>(
+      '/api/admin/monthly-properties'
+    );
+  },
+
+  searchUsers(query: string) {
+    return request<AdminUserResult[]>(`/api/admin/users/search?q=${encodeURIComponent(query)}`);
+  },
+
+  makeAgent(data: { userId: number; name: string; specialty: string; city: string; image: string; phone: string; email: string }) {
+    return request<{ id: number }>('/api/admin/agents', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  agentCandidates() {
+    return request<AdminCandidate[]>('/api/admin/agent-candidates');
+  },
+
+  acceptCandidate(id: number, specialty: string) {
+    return request<{ id: number }>(`/api/admin/agent-candidates/${id}`, {
+      method: 'POST',
+      body: JSON.stringify({ specialty }),
+    });
+  },
+
+  declineCandidate(id: number) {
+    return request<{ deleted: boolean }>(`/api/admin/agent-candidates/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};

@@ -14,6 +14,7 @@ import {
   meetings as meetingsApi,
 } from '../../lib/api';
 import type { User, VisitingRow, Property, Meeting } from '../../lib/types';
+import AdminPanel from '../../components/AdminPanel';
 
 const PAGE_SIZE = 5;
 
@@ -547,6 +548,8 @@ export default function ProfileScreen() {
   }
 
   if (!profile) return null;
+
+  if (profile.role === 'admin') return <AdminPanel />;
 
   const isAgent = profile.role === 'agent';
   const totalMeetingPages = Math.ceil(meetingsTotal / PAGE_SIZE);
