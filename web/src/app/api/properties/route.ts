@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, ilike, and, SQL, sql } from "drizzle-orm";
+import { eq, ilike, and, or, SQL, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { properties, agents, messages, pendingListings, NewProperty } from "@/db/schema";
 import { verifyToken } from "@/lib/jwt";
@@ -20,13 +20,26 @@ function tryAuth(req: NextRequest): AuthPayload {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
-    const city = searchParams.get("city");
-    const type = searchParams.get("type") as NewProperty["type"] | null;
+    const q      = searchParams.get("q");
+    const city   = searchParams.get("city");
+    const type   = searchParams.get("type") as NewProperty["type"] | null;
     const status = searchParams.get("status") as NewProperty["status"] | null;
 
     const filters: SQL[] = [];
-    if (city) filters.push(ilike(properties.city, `%${city}%`));
-    if (type) filters.push(sql`${properties.type} = ${type}`);
+    if (q) {
+      const term = `%${q}%`;
+      filters.push(
+        or(
+          ilike(properties.city,    term),
+          ilike(properties.address, term),
+          ilike(properties.state,   term),
+          ilike(properties.zipCode, term),
+          ilike(properties.title,   term),
+        )!
+      );
+    }
+    if (city)   filters.push(ilike(properties.city, `%${city}%`));
+    if (type)   filters.push(sql`${properties.type} = ${type}`);
     if (status) filters.push(sql`${properties.status} = ${status}`);
 
     const rows = await db

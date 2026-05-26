@@ -103,7 +103,7 @@ export const users = {
 // ─── Properties ───────────────────────────────────────────────────────────────
 
 export const properties = {
-  list(params?: { city?: string; type?: string; status?: string }) {
+  list(params?: { q?: string; city?: string; type?: string; status?: string }) {
     const query = new URLSearchParams(params as Record<string, string>).toString();
     return request<Property[]>(`/api/properties${query ? `?${query}` : ''}`);
   },
