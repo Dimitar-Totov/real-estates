@@ -320,4 +320,10 @@ export const admin = {
       method: 'DELETE',
     });
   },
+
+  deleteAgent(id: number) {
+    return request<{ success: boolean }>(`/api/admin/agents/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };

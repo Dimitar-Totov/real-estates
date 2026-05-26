@@ -54,3 +54,8 @@ User2:
 Username: User
 Email: user@email.com
 Password: User123456!
+
+User3:
+Username: Martin
+Email: martin@gmail.com
+Password: Martin123456!

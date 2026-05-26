@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../../lib/auth-context';
-import { agents as agentsApi, messages as messagesApi } from '../../../lib/api';
+import { agents as agentsApi, messages as messagesApi, admin as adminApi } from '../../../lib/api';
 import type { Agent } from '../../../lib/types';
 
 // ─── Local types ──────────────────────────────────────────────────────────────
@@ -290,21 +290,24 @@ function CommentModal({
 // ─── Agent Card ───────────────────────────────────────────────────────────────
 
 function AgentCard({
-  agent, myRating, myComment, canRate, reviewCount,
-  onPressReviews, onEmail, onComment, onRated,
+  agent, myRating, myComment, canRate, isAdmin, reviewCount,
+  onPressReviews, onEmail, onComment, onRated, onDelete,
 }: {
   agent: Agent;
   myRating: number | null;
   myComment: string | null;
   canRate: boolean;
+  isAdmin: boolean;
   reviewCount: number;
   onPressReviews: () => void;
   onEmail: () => void;
   onComment: () => void;
   onRated: (star: number) => void;
+  onDelete: () => void;
 }) {
   const [localRating, setLocalRating] = useState<number | null>(myRating);
   const [ratingLoading, setRatingLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const color = avatarColor(agent.name);
 
   const handleRate = async (star: number) => {
@@ -393,16 +396,54 @@ function AgentCard({
           <TouchableOpacity style={s.emailBtn} onPress={onEmail} activeOpacity={0.7}>
             <Text style={s.emailBtnText}>✉ Email</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[s.commentBtn, hasComment && s.commentBtnSaved]}
-            onPress={onComment}
-            activeOpacity={0.7}
-          >
-            <Text style={[s.commentBtnText, hasComment && s.commentBtnSavedText]}>
-              {hasComment ? '✓ Commented' : '★ Comment'}
-            </Text>
-          </TouchableOpacity>
+          {canRate && (
+            <TouchableOpacity
+              style={[s.commentBtn, hasComment && s.commentBtnSaved]}
+              onPress={onComment}
+              activeOpacity={0.7}
+            >
+              <Text style={[s.commentBtnText, hasComment && s.commentBtnSavedText]}>
+                {hasComment ? '✓ Commented' : '★ Comment'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* Admin delete section */}
+        {isAdmin && (
+          <View style={s.deleteSection}>
+            {confirming ? (
+              <View style={s.confirmRow}>
+                <View style={s.confirmWarning}>
+                  <Text style={s.confirmWarningIcon}>⚠️</Text>
+                  <Text style={s.confirmWarningText} numberOfLines={1}>Remove {agent.name}?</Text>
+                </View>
+                <TouchableOpacity
+                  style={s.confirmYesBtn}
+                  onPress={() => { setConfirming(false); onDelete(); }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={s.confirmYesTxt}>Yes, delete</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.confirmCancelBtn}
+                  onPress={() => setConfirming(false)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={s.confirmCancelTxt}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={s.deleteBtn}
+                onPress={() => setConfirming(true)}
+                activeOpacity={0.75}
+              >
+                <Text style={s.deleteBtnText}>🗑  Delete Agent</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -553,6 +594,16 @@ export default function FindAgentScreen() {
   const [commentAgent, setCommentAgent] = useState<Agent | null>(null);
 
   const canRate = user?.role === 'user';
+  const isAdmin = user?.role === 'admin';
+
+  const handleDelete = async (agentId: number) => {
+    try {
+      await adminApi.deleteAgent(agentId);
+      setAgentsList((prev) => prev.filter((a) => a.id !== agentId));
+    } catch (e) {
+      Alert.alert('Error', e instanceof Error ? e.message : 'Failed to delete agent');
+    }
+  };
 
   // Fetch all agents
   useEffect(() => {
@@ -723,11 +774,13 @@ export default function FindAgentScreen() {
                 myRating={myRatings[agent.id] ?? null}
                 myComment={myComments[agent.id] ?? null}
                 canRate={canRate && agent.userId !== user?.id}
+                isAdmin={isAdmin}
                 reviewCount={reviewCounts[agent.id] ?? Number(agent.reviews ?? 0)}
                 onPressReviews={() => setReviewsAgent(agent)}
                 onEmail={() => handleEmail(agent)}
                 onComment={() => handleComment(agent)}
                 onRated={(star) => setMyRatings((prev) => ({ ...prev, [agent.id]: star }))}
+                onDelete={() => handleDelete(agent.id)}
               />
             ))}
           </View>
@@ -847,6 +900,19 @@ const s = StyleSheet.create({
   commentBtnSaved: { backgroundColor: '#ede9fe', borderWidth: 1.5, borderColor: '#7c3aed' },
   commentBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
   commentBtnSavedText: { color: '#6d28d9' },
+
+  // Admin delete
+  deleteSection:      { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  deleteBtn:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 8, borderWidth: 1.5, borderColor: '#fca5a5' },
+  deleteBtnText:      { color: '#dc2626', fontWeight: '600', fontSize: 14 },
+  confirmRow:         { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  confirmWarning:     { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 7 },
+  confirmWarningIcon: { fontSize: 13 },
+  confirmWarningText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#92400e' },
+  confirmYesBtn:      { backgroundColor: '#dc2626', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
+  confirmYesTxt:      { color: '#fff', fontWeight: '700', fontSize: 12 },
+  confirmCancelBtn:   { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
+  confirmCancelTxt:   { color: '#6b7280', fontWeight: '600', fontSize: 12 },
 });
 
 // ─── Styles: reviews modal ────────────────────────────────────────────────────
