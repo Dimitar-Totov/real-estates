@@ -55,7 +55,7 @@ export default function ScreensLayout() {
       <Drawer.Screen name="feed" options={{ drawerLabel: 'Feed', title: 'Feed' }} />
       <Drawer.Screen name="profile" options={{ drawerLabel: 'My Profile', title: 'My Profile', drawerItemStyle: user ? undefined : { display: 'none' } }} />
       <Drawer.Screen name="auth" options={{ title: 'Sign In', drawerItemStyle: { display: 'none' } }} />
-      <Drawer.Screen name="messages" options={{ title: 'Messages', drawerItemStyle: { display: 'none' } }} />
+      <Drawer.Screen name="messages" options={{ drawerLabel: 'Messages', title: 'Messages', drawerItemStyle: user ? undefined : { display: 'none' } }} />
     </Drawer>
   );
 }
