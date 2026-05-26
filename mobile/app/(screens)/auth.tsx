@@ -1,6 +1,6 @@
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
-import { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useState, useCallback } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../lib/auth-context';
 
 type Mode = 'login' | 'register';
@@ -18,6 +18,14 @@ export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+
+  useFocusEffect(useCallback(() => {
+    setMode('login');
+    setUsername('');
+    setEmail('');
+    setPassword('');
+    setConfirm('');
+  }, []));
 
   const isLogin = mode === 'login';
 
@@ -123,7 +131,7 @@ export default function AuthScreen() {
               onChangeText={setPassword}
             />
             <TouchableOpacity style={s.eyeBtn} onPress={() => setShowPassword(!showPassword)}>
-              <Text style={s.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+              <Text style={s.eyeIcon}>{showPassword ? '👁️' : '🙈'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -143,7 +151,7 @@ export default function AuthScreen() {
                 onChangeText={setConfirm}
               />
               <TouchableOpacity style={s.eyeBtn} onPress={() => setShowConfirm(!showConfirm)}>
-                <Text style={s.eyeIcon}>{showConfirm ? '🙈' : '👁️'}</Text>
+                <Text style={s.eyeIcon}>{showConfirm ? '👁️' : '🙈'}</Text>
               </TouchableOpacity>
             </View>
           </View>
